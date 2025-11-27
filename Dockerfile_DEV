@@ -1,10 +1,11 @@
 # Use a lightweight JDK 17 image
-FROM openjdk:17-jdk-slim
+FROM eclipse-temurin:17-jdk-jammy
 
 # Install necessary packages
 RUN apt-get update && apt-get install -y \
     fontconfig \
     fonts-dejavu-core \
+    libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Set the working directory
@@ -14,7 +15,7 @@ WORKDIR /app
 COPY ./build/libs/*.jar app.jar
 
 # Expose HTTP and HTTPS ports
-EXPOSE 303
+EXPOSE 1313
 
 # Set the entrypoint script
 ENTRYPOINT ["java", "-Djava.awt.headless=true", "-jar", "app.jar"]

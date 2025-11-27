@@ -1,0 +1,23 @@
+package com.nfcaab.porygon.repositories
+
+import com.nfcaab.porygon.model.GameLineup
+import org.springframework.data.jpa.repository.Query
+import org.springframework.data.repository.CrudRepository
+import org.springframework.stereotype.Repository
+
+@Repository
+interface GameLineupRepository : CrudRepository<GameLineup, Int> {
+    @Query(value = "SELECT * FROM game_lineups WHERE game_id = :gameId AND team = :team AND lineup_spot = :lineupSpot", nativeQuery = true)
+    fun getBatterByLineupSpotAndTeam(
+        gameId: Int,
+        team: String,
+        lineupSpot: Int,
+    ): GameLineup?
+
+    @Query(value = "SELECT * FROM game_lineups WHERE game_id = :gameId AND team = :team AND position = 'Pitcher' AND currently_playing = true", nativeQuery = true)
+    fun getPitcherByTeam(
+        gameId: Int,
+        team: String,
+    ): GameLineup?
+}
+

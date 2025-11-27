@@ -1,1 +1,1 @@
-rootProject.name = "porygon"
+rootProject.name = "com.nfcaab.porygon"

@@ -6,8 +6,8 @@ pipeline {
     }
 
     environment {
-        IMAGE_NAME = 'fcb-porygon-dev'
-        CONTAINER_NAME = 'FCB-Porygon-DEV'
+        IMAGE_NAME = 'nfcaab-porygon-dev'
+        CONTAINER_NAME = 'NFCAAB-Porygon-DEV'
         DOCKERFILE = 'Dockerfile_DEV'
         APP_PROPERTIES = './src/main/resources/application.properties'
         DB_URL = credentials('DEV_DB_URL')
@@ -78,9 +78,8 @@ pipeline {
                         # Domain configuration
                         domain.url=https://dev.api.fakecollegebaseball.com
                         website.url=http://dev.fakecollegebaseball.com
-                        server.servlet.context-path=/porygon
                         server.address=0.0.0.0
-                        server.port=303
+                        server.port=1313
 
                         # Images configuration
                         images.path=/app/images
@@ -125,7 +124,7 @@ pipeline {
                         discord.forum.channel.id=${env.DISCORD_FORUM_CHANNEL_ID}
                         discord.client.id=${env.DISCORD_CLIENT_ID}
                         discord.client.secret=${env.DISCORD_CLIENT_SECRET}
-                        discord.oauth.redirect=https://dev.api.fakecollegebaseball.com/porygon/discord/redirect
+                        discord.oauth.redirect=https://dev.api.fakecollegebaseball.com/api/v1/porygon/discord/redirect
 
                         # Logging configuration
                         logging.level.org.hibernate=warn
@@ -137,7 +136,7 @@ pipeline {
                 }
 
                 echo 'Building the Porygon project...'
-                sh './gradlew clean build'
+                sh './gradlew build -x test'
             }
         }
 

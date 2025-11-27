@@ -9,9 +9,9 @@ plugins {
     application
 }
 
-group = "com.fcb"
+group = "com.nfcaab"
 version = "1.0.0"
-description = "FCB-Porygon"
+description = "NFCAAB-Porygon"
 java.sourceCompatibility = JavaVersion.VERSION_17
 
 repositories {
@@ -64,9 +64,16 @@ dependencies {
     implementation("io.jsonwebtoken:jjwt-api:0.11.5")
     implementation("io.jsonwebtoken:jjwt-impl:0.11.5")
     implementation("io.jsonwebtoken:jjwt-jackson:0.11.5")
-    testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.junit.jupiter:junit-jupiter")
     testImplementation("org.jetbrains.kotlin:kotlin-test")
+    testImplementation("org.springframework.boot:spring-boot-starter-test") {
+        exclude(group = "org.mockito")
+    }
+    testImplementation("com.h2database:h2")
+}
+
+tasks.test {
+    useJUnitPlatform()
 }
 
 tasks.withType<KotlinJvmCompile>().configureEach {

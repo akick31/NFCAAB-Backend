@@ -1,20 +1,20 @@
-# FCB Porygon
+# NFCAAB Porygon
 
-**FCB Porygon** is a Spring Boot service with a REST API created for the **Fake College Baseball** game. The service acts as the backend for the game, handling game logic, player actions, team management, and real-time updates. It integrates with the larger **FCB ecosystem**, including the **FCB Umpire** and **FCB Website**.
+**NFCAAB Porygon** is a Spring Boot service with a REST API created for the **Fake College Baseball** game. The service acts as the backend for the game, handling game logic, player actions, team management, and real-time updates. It integrates with the larger **NFCAAB ecosystem**, including the **NFCAAB Umpire** and **NFCAAB Website**.
 
-The service is responsible for processing game data, simulating plays, updating player stats, and managing the game state. It exposes endpoints that allow the **FCB Umpire** to send requests and receive updates, enabling seamless communication between the game and Discord.
+The service is responsible for processing game data, simulating plate appearances, updating player stats, and managing the game state. It exposes endpoints that allow the **NFCAAB Umpire** to send requests and receive updates, enabling seamless communication between the game and Discord.
 
 ---
 
 ## Features
 - **REST API**: Built with Spring Boot, the service provides a RESTful API for interacting with the game.
-- **Game Logic**: Handles game logic, including play simulation, player actions, and team management.
+- **Game Logic**: Handles game logic, including plate appearance simulation, player actions, and team management.
 - **Team Management**: Allows players to create, manage, and customize their teams.
 - **User Management**: Supports user registration, login, and authentication.
 - **Stats Tracking**: Tracks player stats, team stats, and game stats in real-time.
 - **Season Management**: Manages game seasons, schedules, and standings.
 - **Rankings Management**: Manages team rankings
-- **Discord Integration**: Connects with the **FCFB Discord Bot** for player interaction and game updates.
+- **Discord Integration**: Connects with the **NFCAAB Discord Bot** for player interaction and game updates.
 
 ---
 
@@ -29,14 +29,14 @@ To report bugs or submit feature requests:
 ### 1. Prerequisites
 - **Java Development Kit (JDK)**: Version 17 or higher.
 - **Gradle**: Installed on your system for building the project.
-- **Discord Bot Token**: You’ll need a bot token from the Discord Developer Portal, the same one used for FCFB-Discord-Bot
+- **Discord Bot Token**: You'll need a bot token from the Discord Developer Portal, the same one used for NFCAAB-Discord-Bot
 - **Application Properties**: A pre-configured application.properties file with sensitive information.
 
 ### 2. Clone the Repository
 Clone the project to your local machine:
 ```bash
-git clone https://github.com/akick31/fcb-porygon.git
-cd fcfb-arceus
+git clone https://github.com/akick31/nfcaab-backend.git
+cd nfcaab-backend
 ```
 
 ### 3. Configure Application Properties
@@ -70,7 +70,7 @@ gradle run
 ---
 
 ## Development Notes
-- **Frontend Integration**: The application is tightly integrated with [FCB-Umpire](https://github.com/akick31/FCB-Umpire), but information from the Discord bot can be manually sent via Postman or other REST clients. The Discord bot displays the information on Discord for users.
+- **Frontend Integration**: The application is tightly integrated with [NFCAAB-Umpire](https://github.com/akick31/NFCAAB-Umpire), but information from the Discord bot can be manually sent via Postman or other REST clients. The Discord bot displays the information on Discord for users.
 - **Exposed Endpoint**: The application exposes several REST endpoints that allow the Discord bot to send requests to it. Ensure proper networking configuration if both are not running on the same machine.
 - **Database**: The application uses a MariaDB database to store game, team, user, and stat data. Make sure the database is running and accessible if you’re testing the service.
 
