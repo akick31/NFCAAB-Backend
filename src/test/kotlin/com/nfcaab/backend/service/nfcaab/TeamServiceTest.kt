@@ -33,7 +33,7 @@ class TeamServiceTest {
             name = "Team A"
         }
 
-        every { teamRepository.findById(id) } returns java.util.Optional.of(team)
+        every { teamRepository.findById(id) } returns java.util.Optional.of<Team?>(team)
 
         val result = teamService.getTeamById(id)
 

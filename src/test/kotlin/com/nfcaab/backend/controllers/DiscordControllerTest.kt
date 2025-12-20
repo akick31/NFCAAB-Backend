@@ -33,9 +33,9 @@ class DiscordControllerTest {
 
         val expectedAtBat = AtBat().apply {
             id = 1
-            gameId = gameId
-            pitcherSubmitter = pitcherSubmitter
-            pitcherNumberSubmission = pitcherNumberSubmission.toString()
+            this.gameId = gameId
+            this.pitcherSubmitter = pitcherSubmitter
+            this.pitcherNumberSubmission = pitcherNumberSubmission.toString()
         }
 
         every {
@@ -75,10 +75,10 @@ class DiscordControllerTest {
 
         val expectedAtBat = AtBat().apply {
             id = 1
-            gameId = gameId
-            batterSubmitter = batterSubmitter
-            batterNumberSubmission = batterNumberSubmission
-            submissionType = submissionType
+            this.gameId = gameId
+            this.batterSubmitter = batterSubmitter
+            this.batterNumberSubmission = batterNumberSubmission.toString()
+            this.submissionType = submissionType
         }
 
         every {
@@ -118,9 +118,9 @@ class DiscordControllerTest {
 
         val expectedAtBat = AtBat().apply {
             id = 1
-            gameId = gameId
-            pitcherSubmitter = pitcherSubmitter
-            pitcherNumberSubmission = pitcherNumberSubmission.toString()
+            this.gameId = gameId
+            this.pitcherSubmitter = pitcherSubmitter
+            this.pitcherNumberSubmission = pitcherNumberSubmission.toString()
             this.submissionType = submissionType
         }
 

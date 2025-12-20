@@ -36,7 +36,7 @@ class AuthControllerTest {
     fun `login should call authService login`() {
         val usernameOrEmail = "testuser"
         val password = "password123"
-        val expectedResult = mockk<com.nfcaab.backend.dto.LoginResponse>()
+        val expectedResult = mockk<com.nfcaab.backend.dto.website.LoginResponse>()
         every { authService.login(usernameOrEmail, password) } returns expectedResult
 
         val result = authController.login(usernameOrEmail, password)

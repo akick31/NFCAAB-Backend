@@ -34,10 +34,8 @@ class DiscordServiceTest {
         val responseBody = "channel123,thread456"
         val responseEntity = ResponseEntity.ok(responseBody)
 
-        every {
-            serverUtils.retryWithExponentialBackoff {
-                restTemplate.postForEntity(any<String>(), any(), String::class.java)
-            }
+        coEvery {
+            serverUtils.retryWithExponentialBackoff<ResponseEntity<String>>(any(), any(), any(), any(), any())
         } returns responseEntity
 
         val result = discordService.startGameThread(game)
@@ -53,10 +51,8 @@ class DiscordServiceTest {
             id = 1
         }
 
-        every {
-            serverUtils.retryWithExponentialBackoff {
-                restTemplate.postForEntity(any<String>(), any(), String::class.java)
-            }
+        coEvery {
+            serverUtils.retryWithExponentialBackoff<ResponseEntity<String>>(any(), any(), any(), any(), any())
         } throws Exception("Network error")
 
         val result = discordService.startGameThread(game)

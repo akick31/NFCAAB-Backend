@@ -21,30 +21,29 @@ class SeasonServiceTest {
 
     @Test
     fun `startSeason should create new season`() {
-        val expectedResult = "Season started successfully"
-
-        every { seasonRepository.findTopByOrderBySeasonNumberDesc() } returns null
+        every { seasonRepository.getPreviousSeason() } returns null
         every { seasonRepository.save(any()) } returns mockk<Season>()
 
-        val result = seasonService.startSeason()
+        seasonService.startSeason()
 
-        assertEquals(expectedResult, result)
+        verify { seasonRepository.getPreviousSeason() }
         verify { seasonRepository.save(any()) }
     }
 
     @Test
-    fun `getCurrentSeason should return current season number`() {
+    fun `getCurrentSeason should return current season`() {
         val season = Season().apply {
             seasonNumber = 2024
             currentWeek = 5
         }
 
-        every { seasonRepository.findTopByOrderBySeasonNumberDesc() } returns season
+        every { seasonRepository.getCurrentSeason() } returns season
 
         val result = seasonService.getCurrentSeason()
 
-        assertEquals(2024, result)
-        verify { seasonRepository.findTopByOrderBySeasonNumberDesc() }
+        assertEquals(season, result)
+        assertEquals(2024, result.seasonNumber)
+        verify { seasonRepository.getCurrentSeason() }
     }
 
     @Test
@@ -54,12 +53,12 @@ class SeasonServiceTest {
             currentWeek = 5
         }
 
-        every { seasonRepository.findTopByOrderBySeasonNumberDesc() } returns season
+        every { seasonRepository.getCurrentSeason() } returns season
 
         val result = seasonService.getCurrentWeek()
 
         assertEquals(5, result)
-        verify { seasonRepository.findTopByOrderBySeasonNumberDesc() }
+        verify { seasonRepository.getCurrentSeason() }
     }
 }
 

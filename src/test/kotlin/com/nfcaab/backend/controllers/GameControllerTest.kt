@@ -82,7 +82,7 @@ class GameControllerTest {
         val requestMessageId = "msg123"
         val game = Game().apply {
             id = 1
-            requestMessageId = requestMessageId
+            this.requestMessageId = requestMessageId
         }
 
         every { gameService.getGameByRequestMessageId(requestMessageId) } returns game
@@ -140,7 +140,6 @@ class GameControllerTest {
                 any(),
                 any(),
                 any(),
-                any(),
                 pageable,
             )
         } returns mockPage
@@ -159,7 +158,6 @@ class GameControllerTest {
         assertEquals(1, result.body?.totalElements)
         verify {
             gameService.getFilteredGames(
-                any(),
                 any(),
                 any(),
                 any(),

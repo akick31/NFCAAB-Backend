@@ -13,6 +13,7 @@ import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -63,21 +64,22 @@ class AuthServiceTest {
         val password = "password123"
         val encodedPassword = "encodedPassword"
         val token = "abc123"
+        val userRole = com.nfcaab.backend.enums.user.UserRole.USER
 
-        val user = User().apply {
+        val testUser = User().apply {
             id = 1
             username = usernameOrEmail
             this.password = encodedPassword
-            role = com.nfcaab.backend.enums.user.UserRole.USER
+            role = userRole
         }
 
-        every { userService.getUserByUsernameOrEmail(usernameOrEmail) } returns user
+        every { userService.getUserByUsernameOrEmail(usernameOrEmail) } returns testUser
         every { passwordEncoder.matches(password, encodedPassword) } returns true
-        every { sessionService.generateToken(user.id) } returns token
+        every { sessionService.generateToken(testUser.id) } returns token
 
         val result = authService.login(usernameOrEmail, password)
 
-        assertEquals(LoginResponse(token, user.id, user.role), result)
+        assertEquals(LoginResponse(token, testUser.id, userRole), result)
         verify { passwordEncoder.matches(password, encodedPassword) }
         verify { sessionService.generateToken(user.id) }
     }
@@ -97,9 +99,11 @@ class AuthServiceTest {
         every { userService.getUserByUsernameOrEmail(usernameOrEmail) } returns user
         every { passwordEncoder.matches(password, encodedPassword) } returns false
 
-        assertThrows<UserUnauthorizedException> {
+        org.junit.jupiter.api.assertThrows<UserUnauthorizedException> {
             authService.login(usernameOrEmail, password)
         }
+        verify { userService.getUserByUsernameOrEmail(usernameOrEmail) }
+        verify { passwordEncoder.matches(password, encodedPassword) }
     }
 
     @Test
@@ -149,7 +153,7 @@ class AuthServiceTest {
         val result = authService.resetVerificationToken(id)
 
         assertNotNull(result.verificationToken)
-        verify { emailService.sendVerificationEmail(newSignup.email, newSignup.id, any()) }
+        verify { emailService.sendVerificationEmail(newSignup.email ?: "", newSignup.id, any()) }
     }
 
     @Test

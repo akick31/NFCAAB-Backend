@@ -34,20 +34,22 @@ class ScheduleControllerTest {
     }
 
     @Test
-    fun `getScheduleBySeasonAndTeam should return schedule`() {
+    fun `getScheduleBySeasonAndTeam should return schedule list`() {
         val season = 2024
         val team = "Team A"
-        val schedule = Schedule().apply {
-            this.season = season
-            this.homeTeam = team
-            this.awayTeam = "Team B"
-        }
+        val schedules = listOf(
+            Schedule().apply {
+                this.season = season
+                this.homeTeam = team
+                this.awayTeam = "Team B"
+            }
+        )
 
-        every { scheduleService.getScheduleBySeasonAndTeam(season, team) } returns schedule
+        every { scheduleService.getScheduleBySeasonAndTeam(season, team) } returns schedules
 
         val result = scheduleController.getScheduleBySeasonAndTeam(season, team)
 
-        assertEquals(schedule, result)
+        assertEquals(schedules, result)
         verify { scheduleService.getScheduleBySeasonAndTeam(season, team) }
     }
 }

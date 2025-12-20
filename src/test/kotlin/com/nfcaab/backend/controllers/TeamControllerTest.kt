@@ -3,6 +3,7 @@ package com.nfcaab.backend.controllers
 import com.nfcaab.backend.model.Team
 import com.nfcaab.backend.service.nfcaab.TeamService
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -133,41 +134,41 @@ class TeamControllerTest {
     }
 
     @Test
-    fun `fireCoach should return success message`() {
+    fun `fireCoach should return team`() {
         val team = "Team A"
-        val expectedResult = "Coach fired successfully"
+        val updatedTeam = Team().apply {
+            name = team
+            coachDiscordId = null
+        }
 
-        every { teamService.fireCoach(team) } returns expectedResult
+        every { teamService.fireCoach(team) } returns updatedTeam
 
         val result = teamController.fireCoach(team)
 
-        assertEquals(expectedResult, result)
+        assertEquals(updatedTeam, result)
         verify { teamService.fireCoach(team) }
     }
 
     @Test
-    fun `getOpenTeams should return list of teams`() {
-        val teams = listOf(
-            Team().apply { name = "Team A" },
-            Team().apply { name = "Team B" },
-        )
+    fun `getOpenTeams should return list of team names`() {
+        val teamNames = listOf("Team A", "Team B")
 
-        every { teamService.getOpenTeams() } returns teams
+        every { teamService.getOpenTeams() } returns teamNames
 
         val result = teamController.getOpenTeams()
 
-        assertEquals(teams, result)
+        assertEquals(teamNames, result)
         verify { teamService.getOpenTeams() }
     }
 
     @Test
-    fun `deleteTeam should return success`() {
+    fun `deleteTeam should return HttpStatus`() {
         val id = 1
-        every { teamService.deleteTeam(id) } returns true
+        every { teamService.deleteTeam(id) } returns org.springframework.http.HttpStatus.OK
 
         val result = teamController.deleteTeam(id)
 
-        assertEquals(true, result)
+        assertEquals(org.springframework.http.HttpStatus.OK, result)
         verify { teamService.deleteTeam(id) }
     }
 }

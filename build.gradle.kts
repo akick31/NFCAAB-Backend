@@ -55,7 +55,10 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-bom:1.9.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.9.0")
     implementation("io.projectreactor.kotlin:reactor-kotlin-extensions:1.2.3")
-    implementation("com.kotlindiscord.kord.extensions:kord-extensions:1.6.0")
+    implementation("com.kotlindiscord.kord.extensions:kord-extensions:1.6.0") {
+        exclude(group = "io.insert-koin", module = "koin-test")
+        exclude(group = "io.insert-koin", module = "koin-test-jvm")
+    }
     implementation("com.google.code.gson:gson:2.11.0")
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.18.0")
     implementation("org.apache.httpcomponents:httpclient:4.5.14")
@@ -76,9 +79,15 @@ dependencies {
 }
 
 configurations.all {
+    exclude(group = "io.insert-koin", module = "koin-test")
+    exclude(group = "io.insert-koin", module = "koin-test-jvm")
     resolutionStrategy {
         force("org.jetbrains.kotlin:kotlin-test-junit5:2.0.21")
-        exclude(group = "org.jetbrains.kotlin", module = "kotlin-test-junit")
+        eachDependency {
+            if (requested.group == "org.jetbrains.kotlin" && requested.name == "kotlin-test-junit") {
+                useTarget("org.jetbrains.kotlin:kotlin-test-junit5:2.0.21")
+            }
+        }
     }
 }
 

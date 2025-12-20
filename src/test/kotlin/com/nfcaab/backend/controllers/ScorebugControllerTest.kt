@@ -8,6 +8,7 @@ import com.nfcaab.backend.service.nfcaab.ScorebugService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -25,64 +26,76 @@ class ScorebugControllerTest {
     }
 
     @Test
-    fun `generateAllScorebugs should return success message`() {
-        val expectedResult = "Scorebugs generated successfully"
+    fun `generateAllScorebugs should call service`() {
+        every { scorebugService.generateAllScorebugs() } returns Unit
 
-        every { scorebugService.generateAllScorebugs() } returns expectedResult
+        scorebugController.generateAllScorebugs()
 
-        val result = scorebugController.generateAllScorebugs()
-
-        assertEquals(expectedResult, result)
         verify { scorebugService.generateAllScorebugs() }
     }
 
     @Test
-    fun `getScorebugByGameId should return scorebug bytes`() {
+    fun `getScorebugByGameId should return scorebug response entity`() {
         val gameId = 1
         val scorebugBytes = byteArrayOf(1, 2, 3, 4, 5)
+        val responseEntity = org.springframework.http.ResponseEntity.ok(scorebugBytes)
 
-        every { scorebugService.getScorebugByGameId(gameId) } returns scorebugBytes
+        every { scorebugService.getScorebugByGameId(gameId) } returns responseEntity
 
         val result = scorebugController.getScorebugByGameId(gameId)
 
         assertNotNull(result)
+        assertEquals(scorebugBytes, result.body)
         verify { scorebugService.getScorebugByGameId(gameId) }
     }
 
     @Test
-    fun `getLatestScorebugByGameId should return scorebug bytes`() {
+    fun `getLatestScorebugByGameId should return scorebug response entity`() {
         val gameId = 1
         val scorebugBytes = byteArrayOf(1, 2, 3, 4, 5)
+        val responseEntity = org.springframework.http.ResponseEntity.ok(scorebugBytes)
 
-        every { scorebugService.getLatestScorebugByGameId(gameId) } returns scorebugBytes
+        every { scorebugService.getLatestScorebugByGameId(gameId) } returns responseEntity
 
         val result = scorebugController.getLatestScorebugByGameId(gameId)
 
         assertNotNull(result)
+        assertEquals(scorebugBytes, result.body)
         verify { scorebugService.getLatestScorebugByGameId(gameId) }
     }
 
     @Test
-    fun `getScorebugsForConference should return list of scorebugs`() {
+    fun `getScorebugsForConference should return response entity`() {
         val season = 2024
         val week = 1
         val conference = Conference.ACC
-        val scorebugs = listOf(byteArrayOf(1, 2, 3), byteArrayOf(4, 5, 6))
+        val scorebugs = listOf(
+            mapOf<String, Any>("gameId" to 1, "scorebug" to byteArrayOf(1, 2, 3)),
+            mapOf<String, Any>("gameId" to 2, "scorebug" to byteArrayOf(4, 5, 6))
+        )
+        val responseEntity = org.springframework.http.ResponseEntity.ok(scorebugs)
 
-        every { scorebugService.getScorebugsForConference(season, week, conference) } returns scorebugs
+        every { scorebugService.getScorebugsForConference(season, week, conference) } returns responseEntity
 
         val result = scorebugController.getScorebugsForConference(season, week, conference)
 
         assertNotNull(result)
-        assertEquals(2, result.size)
+        assertNotNull(result.body)
         verify { scorebugService.getScorebugsForConference(season, week, conference) }
     }
 
     @Test
     fun `getFilteredScorebugs should return paginated scorebugs`() {
         val pageable = mockk<Pageable>()
-        val scorebugs = listOf(byteArrayOf(1, 2, 3))
-        val mockPage = PageImpl(scorebugs)
+        val scorebugResponse = com.nfcaab.backend.dto.response.ScorebugResponse(
+            gameId = 1,
+            scorebug = byteArrayOf(1, 2, 3),
+            homeTeam = "Team A",
+            awayTeam = "Team B",
+            status = com.nfcaab.backend.model.Game.GameStatus.IN_PROGRESS
+        )
+        val mockPage = PageImpl(listOf(scorebugResponse))
+        val responseEntity = org.springframework.http.ResponseEntity.ok(mockPage)
 
         every {
             scorebugService.getFilteredScorebugs(
@@ -92,10 +105,9 @@ class ScorebugControllerTest {
                 any(),
                 any(),
                 any(),
-                any(),
                 pageable,
             )
-        } returns mockPage
+        } returns responseEntity
 
         val result = scorebugController.getFilteredScorebugs(
             null,
@@ -110,7 +122,6 @@ class ScorebugControllerTest {
         assertNotNull(result)
         verify {
             scorebugService.getFilteredScorebugs(
-                any(),
                 any(),
                 any(),
                 any(),

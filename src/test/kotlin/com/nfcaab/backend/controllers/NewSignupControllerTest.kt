@@ -21,22 +21,36 @@ class NewSignupControllerTest {
 
     @Test
     fun `getNewSignups should return list of new signups`() {
-        val signups = listOf(
-            NewSignup().apply {
-                id = 1
-                username = "user1"
-            },
-            NewSignup().apply {
-                id = 2
-                username = "user2"
-            },
+        val signupDTOs = listOf(
+            com.nfcaab.backend.dto.website.NewSignupDTO(
+                id = 1,
+                username = "user1",
+                coachName = "Coach 1",
+                discordTag = "user1#1234",
+                discordId = "123",
+                teamChoiceOne = "Team A",
+                teamChoiceTwo = "Team B",
+                teamChoiceThree = "Team C",
+                approved = false,
+            ),
+            com.nfcaab.backend.dto.website.NewSignupDTO(
+                id = 2,
+                username = "user2",
+                coachName = "Coach 2",
+                discordTag = "user2#5678",
+                discordId = "456",
+                teamChoiceOne = "Team D",
+                teamChoiceTwo = "Team E",
+                teamChoiceThree = "Team F",
+                approved = false,
+            ),
         )
 
-        every { newSignupService.getNewSignups() } returns signups
+        every { newSignupService.getNewSignups() } returns signupDTOs
 
         val result = newSignupController.getNewSignups()
 
-        assertEquals(signups, result)
+        assertEquals(signupDTOs, result)
         verify { newSignupService.getNewSignups() }
     }
 }

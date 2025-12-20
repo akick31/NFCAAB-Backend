@@ -20,20 +20,19 @@ class SeasonControllerTest {
     }
 
     @Test
-    fun `startSeason should return success message`() {
-        val expectedResult = "Season started successfully"
+    fun `startSeason should call service`() {
+        every { seasonService.startSeason() } returns Unit
 
-        every { seasonService.startSeason() } returns expectedResult
+        seasonController.startSeason()
 
-        val result = seasonController.startSeason()
-
-        assertEquals(expectedResult, result)
         verify { seasonService.startSeason() }
     }
 
     @Test
-    fun `getCurrentSeason should return current season number`() {
-        val expectedSeason = 2024
+    fun `getCurrentSeason should return current season`() {
+        val expectedSeason = com.nfcaab.backend.model.Season().apply {
+            seasonNumber = 2024
+        }
 
         every { seasonService.getCurrentSeason() } returns expectedSeason
 

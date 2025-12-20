@@ -52,47 +52,45 @@ class UserControllerTest {
     }
 
     @Test
-    fun `getUserByTeam should return user`() {
+    fun `getUserByTeam should return user DTO`() {
         val team = "Team A"
-        val user = User().apply {
-            this.team = team
-        }
+        val userDTO = mockk<UserDTO>()
 
-        every { userService.getUserByTeam(team) } returns user
+        every { userService.getUserByTeam(team) } returns userDTO
 
         val result = userController.getUserByTeam(team)
 
-        assertEquals(user, result)
+        assertEquals(userDTO, result)
         verify { userService.getUserByTeam(team) }
     }
 
     @Test
-    fun `getAllUsers should return list of users`() {
-        val users = listOf(
-            User().apply { username = "user1" },
-            User().apply { username = "user2" },
+    fun `getAllUsers should return list of user DTOs`() {
+        val userDTOs = listOf(
+            mockk<UserDTO>(),
+            mockk<UserDTO>(),
         )
 
-        every { userService.getAllUsers() } returns users
+        every { userService.getAllUsers() } returns userDTOs
 
         val result = userController.getAllUsers()
 
-        assertEquals(users, result)
+        assertEquals(userDTOs, result)
         verify { userService.getAllUsers() }
     }
 
     @Test
-    fun `getFreeAgents should return list of users`() {
-        val users = listOf(
-            User().apply { username = "freeagent1" },
-            User().apply { username = "freeagent2" },
+    fun `getFreeAgents should return list of user DTOs`() {
+        val userDTOs = listOf(
+            mockk<UserDTO>(),
+            mockk<UserDTO>(),
         )
 
-        every { userService.getOpenCoaches() } returns users
+        every { userService.getOpenCoaches() } returns userDTOs
 
         val result = userController.getFreeAgents()
 
-        assertEquals(users, result)
+        assertEquals(userDTOs, result)
         verify { userService.getOpenCoaches() }
     }
 
@@ -110,16 +108,16 @@ class UserControllerTest {
     }
 
     @Test
-    fun `updateUserEmail should return success message`() {
+    fun `updateUserEmail should return user DTO`() {
         val id = 1L
         val newEmail = "newemail@example.com"
-        val expectedResult = "Email updated successfully"
+        val userDTO = mockk<UserDTO>()
 
-        every { userService.updateEmail(id, newEmail) } returns expectedResult
+        every { userService.updateEmail(id, newEmail) } returns userDTO
 
         val result = userController.updateUserEmail(id, newEmail)
 
-        assertEquals(expectedResult, result)
+        assertEquals(userDTO, result)
         verify { userService.updateEmail(id, newEmail) }
     }
 
@@ -136,21 +134,18 @@ class UserControllerTest {
     }
 
     @Test
-    fun `encryptEmails should return success message`() {
-        val expectedResult = "Emails encrypted successfully"
+    fun `encryptEmails should call service`() {
+        every { userService.hashEmails() } returns Unit
 
-        every { userService.hashEmails() } returns expectedResult
+        userController.encryptEmails()
 
-        val result = userController.encryptEmails()
-
-        assertEquals(expectedResult, result)
         verify { userService.hashEmails() }
     }
 
     @Test
-    fun `validateUser should return validation result`() {
+    fun `validateUser should return validation response`() {
         val request = mockk<UserValidationRequest>()
-        val expectedResult = "User validated successfully"
+        val expectedResult = mockk<com.nfcaab.backend.dto.response.UserValidationResponse>()
 
         every { userService.validateUser(request) } returns expectedResult
 
@@ -161,13 +156,13 @@ class UserControllerTest {
     }
 
     @Test
-    fun `deleteTeam should return success`() {
+    fun `deleteTeam should return HttpStatus`() {
         val id = 1L
-        every { userService.deleteUser(id) } returns true
+        every { userService.deleteUser(id) } returns org.springframework.http.HttpStatus.OK
 
         val result = userController.deleteTeam(id)
 
-        assertEquals(true, result)
+        assertEquals(org.springframework.http.HttpStatus.OK, result)
         verify { userService.deleteUser(id) }
     }
 }
