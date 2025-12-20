@@ -1,1 +1,1 @@
-rootProject.name = "com.nfcaab.porygon"
+rootProject.name = "NFCAAB-Backend"

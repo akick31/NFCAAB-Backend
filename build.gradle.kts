@@ -41,6 +41,7 @@ dependencies {
     implementation("org.springframework.session:spring-session-core")
     implementation("org.projectlombok:lombok")
     implementation("org.mariadb.jdbc:mariadb-java-client")
+    implementation("org.jetbrains.kotlin:kotlin-stdlib")
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("javax.persistence:javax.persistence-api")
@@ -70,6 +71,8 @@ dependencies {
         exclude(group = "org.mockito")
     }
     testImplementation("com.h2database:h2")
+    testImplementation("io.mockk:mockk:1.13.8")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
 }
 
 tasks.test {

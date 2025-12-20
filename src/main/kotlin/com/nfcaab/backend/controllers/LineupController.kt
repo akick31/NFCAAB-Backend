@@ -1,0 +1,30 @@
+package com.nfcaab.backend.controllers
+
+import com.nfcaab.backend.dto.requests.LineupSubmissionRequest
+import com.nfcaab.backend.model.GameLineup
+import com.nfcaab.backend.service.nfcaab.LineupService
+import org.springframework.web.bind.annotation.CrossOrigin
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RestController
+
+@CrossOrigin(origins = ["*"])
+@RestController
+@RequestMapping("/lineup")
+class LineupController(
+    private val lineupService: LineupService,
+) {
+    /**
+     * Submit a lineup for a game
+     * @param request Lineup submission request containing gameId, team, batters (1-9), and pitcher
+     * @return List of created GameLineup entries
+     */
+    @PostMapping("/submit")
+    fun submitLineup(
+        @RequestBody request: LineupSubmissionRequest,
+    ): List<GameLineup> {
+        return lineupService.saveLineup(request)
+    }
+}
+
