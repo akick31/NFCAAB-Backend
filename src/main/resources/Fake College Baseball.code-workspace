@@ -1,0 +1,20 @@
+{
+	"folders": [
+		{
+			"path": "../../.."
+		},
+		{
+			"path": "../../../../NFCAAB-Ditto"
+		},
+		{
+			"path": "../../../../FCFB-Discord-Ref-Bot"
+		},
+		{
+			"path": "../../../../FCFB-Backend"
+		},
+		{
+			"path": "../../../../NFCAAB-Umpire"
+		}
+	],
+	"settings": {}
+}

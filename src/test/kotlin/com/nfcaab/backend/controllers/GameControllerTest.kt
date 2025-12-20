@@ -1,17 +1,28 @@
 package com.nfcaab.backend.controllers
 
-import com.nfcaab.backend.enums.team.Subdivision
 import com.nfcaab.backend.dto.requests.StartRequest
+import com.nfcaab.backend.enums.team.Subdivision
 import com.nfcaab.backend.model.Game
 import com.nfcaab.backend.service.nfcaab.GameService
+import com.nfcaab.backend.service.nfcaab.GameSpecificationService.GameCategory
+import com.nfcaab.backend.service.nfcaab.GameSpecificationService.GameFilter
+import com.nfcaab.backend.service.nfcaab.GameSpecificationService.GameSort
+import io.mockk.Runs
+import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.every
+import io.mockk.just
+import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import io.mockk.coEvery
-import io.mockk.every
-import io.mockk.mockk
+import org.springframework.data.domain.PageImpl
+import org.springframework.data.domain.Pageable
+import org.springframework.http.HttpStatus
+import org.springframework.http.ResponseEntity
 
 class GameControllerTest {
     private lateinit var gameController: GameController
@@ -23,7 +34,7 @@ class GameControllerTest {
     }
 
     @Test
-    fun `test startGame`() = runBlocking {
+    fun `startGame should return created game`() = runBlocking {
         val startRequest = StartRequest(
             subdivision = Subdivision.NFCAAB,
             homeTeam = "Team A",
@@ -42,14 +53,186 @@ class GameControllerTest {
         val result = gameController.startGame(startRequest, null)
 
         assertNotNull(result.body)
+        assertEquals(HttpStatus.CREATED, result.statusCode)
         assertEquals(1, result.body?.id)
+        coVerify { gameService.startSingleGame(startRequest, null) }
     }
 
     @Test
-    fun `test endAllGames`() {
+    fun `startWeek should return list of games`() = runBlocking {
+        val season = 2024
+        val week = 1
         val games = listOf(
             Game().apply { id = 1 },
             Game().apply { id = 2 },
+        )
+
+        coEvery { gameService.startWeek(season, week) } returns games
+
+        val result = gameController.startWeek(season, week)
+
+        assertEquals(HttpStatus.CREATED, result.statusCode)
+        assertNotNull(result.body)
+        assertEquals(2, result.body?.size)
+        coVerify { gameService.startWeek(season, week) }
+    }
+
+    @Test
+    fun `getGameByRequestMessageId should return game`() {
+        val requestMessageId = "msg123"
+        val game = Game().apply {
+            id = 1
+            requestMessageId = requestMessageId
+        }
+
+        every { gameService.getGameByRequestMessageId(requestMessageId) } returns game
+
+        val result = gameController.getGameByRequestMessageId(requestMessageId)
+
+        assertNotNull(result.body)
+        assertEquals(1, result.body?.id)
+        verify { gameService.getGameByRequestMessageId(requestMessageId) }
+    }
+
+    @Test
+    fun `getGameByGameId should return game`() {
+        val gameId = 1
+        val game = Game().apply {
+            id = gameId
+            homeTeam = "Team A"
+            awayTeam = "Team B"
+        }
+
+        every { gameService.getGameById(gameId) } returns game
+
+        val result = gameController.getGameByGameId(gameId)
+
+        assertNotNull(result.body)
+        assertEquals(gameId, result.body?.id)
+        verify { gameService.getGameById(gameId) }
+    }
+
+    @Test
+    fun `getAllOngoingGames should return list of games`() {
+        val games = listOf(
+            Game().apply { id = 1 },
+            Game().apply { id = 2 },
+        )
+
+        every { gameService.getAllOngoingGames() } returns games
+
+        val result = gameController.getAllOngoingGames()
+
+        assertNotNull(result.body)
+        assertEquals(2, result.body?.size)
+        verify { gameService.getAllOngoingGames() }
+    }
+
+    @Test
+    fun `getFilteredGames should return paginated games`() {
+        val pageable = mockk<Pageable>()
+        val mockPage = PageImpl(listOf(Game().apply { id = 1 }))
+        every {
+            gameService.getFilteredGames(
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                pageable,
+            )
+        } returns mockPage
+
+        val result = gameController.getFilteredGames(
+            null,
+            null,
+            GameSort.CLOSEST_TO_END,
+            null,
+            null,
+            null,
+            pageable,
+        )
+
+        assertNotNull(result.body)
+        assertEquals(1, result.body?.totalElements)
+        verify {
+            gameService.getFilteredGames(
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                pageable,
+            )
+        }
+    }
+
+    @Test
+    fun `getGameByPlatformId should return game`() {
+        val platformId = 1234UL
+        val game = Game().apply {
+            id = 1
+            gameThreadId = platformId.toString()
+        }
+
+        every { gameService.getGameByPlatformId(platformId) } returns game
+
+        val result = gameController.getGameByPlatformId(platformId)
+
+        assertNotNull(result.body)
+        assertEquals(1, result.body?.id)
+        verify { gameService.getGameByPlatformId(platformId) }
+    }
+
+    @Test
+    fun `endGameByChannelId should return ended game`() {
+        val channelId = 1234UL
+        val game = Game().apply {
+            id = 1
+            gameStatus = Game.GameStatus.FINAL
+        }
+
+        every { gameService.endSingleGame(channelId) } returns game
+
+        val result = gameController.endGameByChannelId(channelId)
+
+        assertNotNull(result.body)
+        assertEquals(Game.GameStatus.FINAL, result.body?.gameStatus)
+        verify { gameService.endSingleGame(channelId) }
+    }
+
+    @Test
+    fun `endGameByGameId should return ended game`() {
+        val gameId = 1
+        val game = Game().apply {
+            id = gameId
+            gameStatus = Game.GameStatus.FINAL
+        }
+
+        every { gameService.endSingleGameByGameId(gameId) } returns game
+
+        val result = gameController.endGameByGameId(gameId)
+
+        assertNotNull(result.body)
+        assertEquals(Game.GameStatus.FINAL, result.body?.gameStatus)
+        verify { gameService.endSingleGameByGameId(gameId) }
+    }
+
+    @Test
+    fun `endAllGames should return list of ended games`() {
+        val games = listOf(
+            Game().apply {
+                id = 1
+                gameStatus = Game.GameStatus.FINAL
+            },
+            Game().apply {
+                id = 2
+                gameStatus = Game.GameStatus.FINAL
+            },
         )
 
         every { gameService.endAllGames() } returns games
@@ -58,22 +241,129 @@ class GameControllerTest {
 
         assertNotNull(result.body)
         assertEquals(2, result.body?.size)
+        verify { gameService.endAllGames() }
     }
 
     @Test
-    fun `test getGameByGameId`() {
+    fun `restartGame should return restarted game`() = runBlocking {
+        val channelId = 1234UL
+        val game = Game().apply {
+            id = 1
+            gameStatus = Game.GameStatus.PREGAME
+        }
+
+        coEvery { gameService.restartGame(channelId) } returns game
+
+        val result = gameController.restartGame(channelId)
+
+        assertNotNull(result.body)
+        assertEquals(Game.GameStatus.PREGAME, result.body?.gameStatus)
+        coVerify { gameService.restartGame(channelId) }
+    }
+
+    @Test
+    fun `deleteGame should return true when successful`() {
+        val channelId = 1234UL
+
+        every { gameService.deleteOngoingGame(channelId) } returns true
+
+        val result = gameController.deleteGame(channelId)
+
+        assertEquals(ResponseEntity.ok(true), result)
+        verify { gameService.deleteOngoingGame(channelId) }
+    }
+
+    @Test
+    fun `updateRequestMessageId should return updated game`() {
+        val gameId = 1
+        val requestMessageId = "msg123"
+        val game = Game().apply {
+            id = gameId
+            this.requestMessageId = requestMessageId
+        }
+
+        every { gameService.updateRequestMessageId(gameId, requestMessageId) } returns game
+
+        val result = gameController.updateRequestMessageId(gameId, requestMessageId)
+
+        assertNotNull(result.body)
+        assertEquals(requestMessageId, result.body?.requestMessageId)
+        verify { gameService.updateRequestMessageId(gameId, requestMessageId) }
+    }
+
+    @Test
+    fun `updateLastMessageTimestamp should return updated game`() {
+        val gameId = 1
+        val game = Game().apply {
+            id = gameId
+        }
+
+        every { gameService.updateLastMessageTimestamp(gameId) } returns game
+
+        val result = gameController.updateLastMessageTimestamp(gameId)
+
+        assertNotNull(result.body)
+        assertEquals(gameId, result.body?.id)
+        verify { gameService.updateLastMessageTimestamp(gameId) }
+    }
+
+    @Test
+    fun `markCloseGamePinged should return no content`() {
+        val gameId = 1
+        every { gameService.markCloseGamePinged(gameId) } just Runs
+
+        val result = gameController.markCloseGamePinged(gameId)
+
+        assertEquals(ResponseEntity.noContent().build<Void>(), result)
+        verify { gameService.markCloseGamePinged(gameId) }
+    }
+
+    @Test
+    fun `markUpsetAlertPinged should return no content`() {
+        val gameId = 1
+        every { gameService.markUpsetAlertPinged(gameId) } just Runs
+
+        val result = gameController.markUpsetAlertPinged(gameId)
+
+        assertEquals(ResponseEntity.noContent().build<Void>(), result)
+        verify { gameService.markUpsetAlertPinged(gameId) }
+    }
+
+    @Test
+    fun `updateGame should return updated game`() {
         val game = Game().apply {
             id = 1
             homeTeam = "Team A"
             awayTeam = "Team B"
         }
 
-        every { gameService.getGameById(1) } returns game
+        every { gameService.updateGame(game) } returns game
 
-        val result = gameController.getGameByGameId(1)
+        val result = gameController.updateGame(game)
 
         assertNotNull(result.body)
         assertEquals(1, result.body?.id)
+        verify { gameService.updateGame(game) }
+    }
+
+    @Test
+    fun `subCoachIntoGame should return updated game`() {
+        val gameId = 1
+        val team = "Team A"
+        val discordId = "discord123"
+        val game = Game().apply {
+            id = gameId
+            homeTeam = team
+        }
+
+        every { gameService.subCoachIntoGame(gameId, team, discordId) } returns game
+
+        val result = gameController.subCoachIntoGame(gameId, team, discordId)
+
+        assertNotNull(result.body)
+        assertEquals(team, result.body?.homeTeam)
+        verify { gameService.subCoachIntoGame(gameId, team, discordId) }
     }
 }
+
 
