@@ -1,7 +1,6 @@
 package com.nfcaab.backend.controllers
 
 import com.nfcaab.backend.model.Team
-import com.nfcaab.backend.service.nfcaab.TeamService
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -12,6 +11,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import com.nfcaab.backend.service.team.TeamService
 
 class TeamControllerTest {
     private lateinit var teamService: TeamService

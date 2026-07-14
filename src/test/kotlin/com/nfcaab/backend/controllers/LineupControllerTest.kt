@@ -3,14 +3,14 @@ package com.nfcaab.backend.controllers
 import com.nfcaab.backend.dto.requests.LineupSubmissionRequest
 import com.nfcaab.backend.model.GameLineup
 import com.nfcaab.backend.model.LineupToken
-import com.nfcaab.backend.service.nfcaab.LineupService
-import com.nfcaab.backend.service.nfcaab.LineupTokenService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import com.nfcaab.backend.service.lineup.LineupService
+import com.nfcaab.backend.service.lineup.LineupTokenService
 
 class LineupControllerTest {
     private lateinit var lineupService: LineupService

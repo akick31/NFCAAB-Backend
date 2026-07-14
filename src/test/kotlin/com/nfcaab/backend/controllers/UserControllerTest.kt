@@ -3,7 +3,6 @@ package com.nfcaab.backend.controllers
 import com.nfcaab.backend.dto.requests.UserValidationRequest
 import com.nfcaab.backend.dto.website.UserDTO
 import com.nfcaab.backend.model.User
-import com.nfcaab.backend.service.nfcaab.UserService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -11,6 +10,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import com.nfcaab.backend.service.user.UserService
 
 class UserControllerTest {
     private lateinit var userService: UserService

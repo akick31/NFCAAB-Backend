@@ -1,10 +1,9 @@
 package com.nfcaab.backend.controllers
 
 import com.nfcaab.backend.enums.team.Conference
-import com.nfcaab.backend.service.nfcaab.GameSpecificationService.GameCategory
-import com.nfcaab.backend.service.nfcaab.GameSpecificationService.GameFilter
-import com.nfcaab.backend.service.nfcaab.GameSpecificationService.GameSort
-import com.nfcaab.backend.service.nfcaab.ScorebugService
+import com.nfcaab.backend.service.game.GameSpecificationService.GameCategory
+import com.nfcaab.backend.service.game.GameSpecificationService.GameFilter
+import com.nfcaab.backend.service.game.GameSpecificationService.GameSort
 import org.springframework.data.domain.Pageable
 import org.springframework.data.web.PageableDefault
 import org.springframework.web.bind.annotation.CrossOrigin
@@ -13,6 +12,8 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
+import com.nfcaab.backend.service.scorebug.ScorebugService
+import com.nfcaab.backend.service.game.GameSpecificationService
 
 @CrossOrigin(origins = ["*"])
 @RestController

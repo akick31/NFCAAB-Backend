@@ -1,13 +1,13 @@
 package com.nfcaab.backend.controllers
 
 import com.nfcaab.backend.model.NewSignup
-import com.nfcaab.backend.service.nfcaab.NewSignupService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import com.nfcaab.backend.service.user.NewSignupService
 
 class NewSignupControllerTest {
     private lateinit var newSignupService: NewSignupService

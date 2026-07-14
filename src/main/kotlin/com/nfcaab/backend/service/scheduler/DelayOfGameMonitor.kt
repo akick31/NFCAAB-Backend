@@ -7,26 +7,25 @@ import com.nfcaab.backend.model.Game
 import com.nfcaab.backend.model.AtBat
 import com.nfcaab.backend.repositories.AtBatRepository
 import com.nfcaab.backend.service.discord.DiscordService
-import com.nfcaab.backend.service.nfcaab.GameService
-import com.nfcaab.backend.service.nfcaab.AtBatService
-import com.nfcaab.backend.service.nfcaab.ScorebugService
-import com.nfcaab.backend.service.nfcaab.UserService
 import com.nfcaab.backend.util.Logger
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
+import com.nfcaab.backend.service.user.UserService
+import com.nfcaab.backend.service.scorebug.ScorebugService
+import com.nfcaab.backend.service.game.GameLifecycleService
+import com.nfcaab.backend.service.game.GameService
+import com.nfcaab.backend.service.atbat.AtBatService
 
 @Service
 class DelayOfGameMonitor(
     private val gameService: GameService,
+    private val gameLifecycleService: GameLifecycleService,
     private val userService: UserService,
     private val atBatService: AtBatService,
     private val discordService: DiscordService,
     private val scorebugService: ScorebugService,
     private val atBatRepository: AtBatRepository,
 ) {
-    /**
-     * Checks for delay of game every minute
-     */
     @Scheduled(fixedRate = 60000)
     fun checkForDelayOfGame() {
         val warnedGames = gameService.findGamesToWarn()
@@ -46,17 +45,13 @@ class DelayOfGameMonitor(
             val delayOfGameInstances = getDelayOfGameInstances(updatedGame)
             val isDelayOfGameOut = delayOfGameInstances.first >= 3 || delayOfGameInstances.second >= 3
             if (isDelayOfGameOut) {
-                gameService.endDOGOutGame(updatedGame, delayOfGameInstances)
+                gameLifecycleService.endDOGOutGame(updatedGame, delayOfGameInstances)
             }
             discordService.notifyDelayOfGame(updatedGame, isDelayOfGameOut)
             Logger.info("A delay of game for game ${game.id} has been processed")
         }
     }
 
-    /**
-     * Get the delay of game instances for a given game
-     * @return Pair of home and away delay of game instances
-     */
     private fun getDelayOfGameInstances(game: Game): Pair<Int, Int> {
         if (game.gameType == Game.GameType.SCRIMMAGE) {
             return Pair(0, 0)
@@ -70,62 +65,61 @@ class DelayOfGameMonitor(
         }
     }
 
-    /**
-     * Apply a delay of game to a game in pregame status
-     * @param game
-     */
+    private fun applyDelayOfGameHomeRun(game: Game): Int {
+        val runsScored =
+            1 +
+                listOfNotNull(game.runnerOnFirst, game.runnerOnSecond, game.runnerOnThird).size
+        game.runnerOnFirst = null
+        game.runnerOnSecond = null
+        game.runnerOnThird = null
+        if (game.inningHalf == Game.InningHalf.TOP) {
+            game.awayScore += runsScored
+        } else {
+            game.homeScore += runsScored
+        }
+        return runsScored
+    }
+
     private fun applyPregameDelayOfGame(game: Game): Game {
         game.gameTimer = gameService.calculateDelayOfGameTimer()
         if (game.waitingOn == TeamSide.HOME) {
-            // Put runner on 3rd base for away team
-            game.runnerOnThird = game.awayBatterLineupSpot
             if (game.gameType != Game.GameType.SCRIMMAGE) {
                 val user = userService.getUserByDiscordId(game.homeCoachDiscordId)
                 user.delayOfGameInstances += 1
                 userService.saveUser(user)
             }
         } else {
-            // Put runner on 3rd base for home team
-            game.runnerOnThird = game.homeBatterLineupSpot
             if (game.gameType != Game.GameType.SCRIMMAGE) {
                 val user = userService.getUserByDiscordId(game.awayCoachDiscordId)
                 user.delayOfGameInstances += 1
                 userService.saveUser(user)
             }
         }
+        val runsScored = applyDelayOfGameHomeRun(game)
 
-        val savedAtBat = saveDelayOfGameOnOffenseAtBat(game)
+        val savedAtBat = saveDelayOfGameOnOffenseAtBat(game, runsScored)
         game.currentAtBatId = savedAtBat.id
         gameService.saveGame(game)
         scorebugService.generateScorebug(game)
         return game
     }
 
-    /**
-     * Apply a delay of game to a game
-     * @param game
-     */
     private fun applyDelayOfGame(game: Game): Game {
         game.gameTimer = gameService.calculateDelayOfGameTimer()
         if (game.waitingOn == TeamSide.HOME) {
-            // Put runner on 3rd base for away team
-            game.runnerOnThird = game.awayBatterLineupSpot
-
             if (game.gameType != Game.GameType.SCRIMMAGE) {
                 val user = userService.getUserByDiscordId(game.homeCoachDiscordId)
                 user.delayOfGameInstances += 1
                 userService.saveUser(user)
             }
         } else {
-            // Put runner on 3rd base for home team
-            game.runnerOnThird = game.homeBatterLineupSpot
-
             if (game.gameType != Game.GameType.SCRIMMAGE) {
                 val user = userService.getUserByDiscordId(game.awayCoachDiscordId)
                 user.delayOfGameInstances += 1
                 userService.saveUser(user)
             }
         }
+        val runsScored = applyDelayOfGameHomeRun(game)
 
         val currentAtBat =
             try {
@@ -136,9 +130,9 @@ class DelayOfGameMonitor(
 
         val savedAtBat =
             if (currentAtBat != null) {
-                saveDelayOfGameOnDefenseAtBat(game, currentAtBat)
+                saveDelayOfGameOnDefenseAtBat(game, currentAtBat, runsScored)
             } else {
-                saveDelayOfGameOnOffenseAtBat(game)
+                saveDelayOfGameOnOffenseAtBat(game, runsScored)
             }
 
         game.currentAtBatId = savedAtBat.id
@@ -148,17 +142,18 @@ class DelayOfGameMonitor(
         return game
     }
 
-    /**
-     * Save a delay of game on defense plate appearance, as defense has called a number
-     */
     private fun saveDelayOfGameOnDefenseAtBat(
         game: Game,
         atBat: AtBat,
+        runsScored: Int,
     ): AtBat {
         atBat.atBatFinished = true
         atBat.batterNumberSubmission = null
         atBat.pitcherNumberSubmission = null
         atBat.difference = null
+        atBat.runsScored = runsScored
+        atBat.homeScore = game.homeScore
+        atBat.awayScore = game.awayScore
         if (game.waitingOn == TeamSide.HOME) {
             atBat.result = Scenario.DELAY_OF_GAME_HOME
             atBat.actualResult = ActualResult.DELAY_OF_GAME
@@ -169,12 +164,10 @@ class DelayOfGameMonitor(
         return atBatRepository.save(atBat)
     }
 
-    /**
-     * Save a delay of game on offense plate appearance, as defense hasn't called a number
-     * @param game
-     */
-    private fun saveDelayOfGameOnOffenseAtBat(game: Game): AtBat {
-        // Create a new plate appearance for delay of game
+    private fun saveDelayOfGameOnOffenseAtBat(
+        game: Game,
+        runsScored: Int,
+    ): AtBat {
         val atBat = AtBat()
         atBat.gameId = game.id
         atBat.homeTeam = game.homeTeam
@@ -190,6 +183,7 @@ class DelayOfGameMonitor(
         atBat.batterNumberSubmission = null
         atBat.pitcherNumberSubmission = null
         atBat.difference = null
+        atBat.runsScored = runsScored
         if (game.waitingOn == TeamSide.HOME) {
             atBat.result = Scenario.DELAY_OF_GAME_HOME
             atBat.actualResult = ActualResult.DELAY_OF_GAME

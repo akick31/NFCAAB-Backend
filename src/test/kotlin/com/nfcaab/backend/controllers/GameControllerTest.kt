@@ -3,10 +3,7 @@ package com.nfcaab.backend.controllers
 import com.nfcaab.backend.dto.requests.StartRequest
 import com.nfcaab.backend.enums.team.Subdivision
 import com.nfcaab.backend.model.Game
-import com.nfcaab.backend.service.nfcaab.GameService
-import com.nfcaab.backend.service.nfcaab.GameSpecificationService.GameCategory
-import com.nfcaab.backend.service.nfcaab.GameSpecificationService.GameFilter
-import com.nfcaab.backend.service.nfcaab.GameSpecificationService.GameSort
+import com.nfcaab.backend.service.game.GameSpecificationService.GameSort
 import io.mockk.Runs
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -23,14 +20,20 @@ import org.springframework.data.domain.PageImpl
 import org.springframework.data.domain.Pageable
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import com.nfcaab.backend.service.game.GameSpecificationService
+import com.nfcaab.backend.service.game.GameService
+import com.nfcaab.backend.service.game.GameLifecycleService
+import com.nfcaab.backend.service.game.GameWeekService
 
 class GameControllerTest {
     private lateinit var gameController: GameController
     private val gameService: GameService = mockk()
+    private val gameLifecycleService: GameLifecycleService = mockk()
+    private val gameWeekService: GameWeekService = mockk()
 
     @BeforeEach
     fun setup() {
-        gameController = GameController(gameService)
+        gameController = GameController(gameService, gameLifecycleService, gameWeekService)
     }
 
     @Test
@@ -48,14 +51,14 @@ class GameControllerTest {
             awayTeam = "Team B"
         }
 
-        coEvery { gameService.startSingleGame(any(), any()) } returns game
+        coEvery { gameLifecycleService.startSingleGame(any(), any()) } returns game
 
         val result = gameController.startGame(startRequest, null)
 
         assertNotNull(result.body)
         assertEquals(HttpStatus.CREATED, result.statusCode)
         assertEquals(1, result.body?.id)
-        coVerify { gameService.startSingleGame(startRequest, null) }
+        coVerify { gameLifecycleService.startSingleGame(startRequest, null) }
     }
 
     @Test
@@ -67,14 +70,14 @@ class GameControllerTest {
             Game().apply { id = 2 },
         )
 
-        coEvery { gameService.startWeek(season, week) } returns games
+        coEvery { gameWeekService.startWeek(season, week) } returns games
 
         val result = gameController.startWeek(season, week)
 
         assertEquals(HttpStatus.CREATED, result.statusCode)
         assertNotNull(result.body)
         assertEquals(2, result.body?.size)
-        coVerify { gameService.startWeek(season, week) }
+        coVerify { gameWeekService.startWeek(season, week) }
     }
 
     @Test
@@ -194,13 +197,13 @@ class GameControllerTest {
             gameStatus = Game.GameStatus.FINAL
         }
 
-        every { gameService.endSingleGame(channelId) } returns game
+        every { gameLifecycleService.endSingleGame(channelId) } returns game
 
         val result = gameController.endGameByChannelId(channelId)
 
         assertNotNull(result.body)
         assertEquals(Game.GameStatus.FINAL, result.body?.gameStatus)
-        verify { gameService.endSingleGame(channelId) }
+        verify { gameLifecycleService.endSingleGame(channelId) }
     }
 
     @Test
@@ -211,13 +214,13 @@ class GameControllerTest {
             gameStatus = Game.GameStatus.FINAL
         }
 
-        every { gameService.endSingleGameByGameId(gameId) } returns game
+        every { gameLifecycleService.endSingleGameByGameId(gameId) } returns game
 
         val result = gameController.endGameByGameId(gameId)
 
         assertNotNull(result.body)
         assertEquals(Game.GameStatus.FINAL, result.body?.gameStatus)
-        verify { gameService.endSingleGameByGameId(gameId) }
+        verify { gameLifecycleService.endSingleGameByGameId(gameId) }
     }
 
     @Test
@@ -233,13 +236,13 @@ class GameControllerTest {
             },
         )
 
-        every { gameService.endAllGames() } returns games
+        every { gameLifecycleService.endAllGames() } returns games
 
         val result = gameController.endAllGames()
 
         assertNotNull(result.body)
         assertEquals(2, result.body?.size)
-        verify { gameService.endAllGames() }
+        verify { gameLifecycleService.endAllGames() }
     }
 
     @Test
@@ -250,25 +253,25 @@ class GameControllerTest {
             gameStatus = Game.GameStatus.PREGAME
         }
 
-        coEvery { gameService.restartGame(channelId) } returns game
+        coEvery { gameLifecycleService.restartGame(channelId) } returns game
 
         val result = gameController.restartGame(channelId)
 
         assertNotNull(result.body)
         assertEquals(Game.GameStatus.PREGAME, result.body?.gameStatus)
-        coVerify { gameService.restartGame(channelId) }
+        coVerify { gameLifecycleService.restartGame(channelId) }
     }
 
     @Test
     fun `deleteGame should return true when successful`() {
         val channelId = 1234UL
 
-        every { gameService.deleteOngoingGame(channelId) } returns true
+        every { gameLifecycleService.deleteOngoingGame(channelId) } returns true
 
         val result = gameController.deleteGame(channelId)
 
         assertEquals(ResponseEntity.ok(true), result)
-        verify { gameService.deleteOngoingGame(channelId) }
+        verify { gameLifecycleService.deleteOngoingGame(channelId) }
     }
 
     @Test
@@ -354,14 +357,12 @@ class GameControllerTest {
             homeTeam = team
         }
 
-        every { gameService.subCoachIntoGame(gameId, team, discordId) } returns game
+        every { gameLifecycleService.subCoachIntoGame(gameId, team, discordId) } returns game
 
         val result = gameController.subCoachIntoGame(gameId, team, discordId)
 
         assertNotNull(result.body)
         assertEquals(team, result.body?.homeTeam)
-        verify { gameService.subCoachIntoGame(gameId, team, discordId) }
+        verify { gameLifecycleService.subCoachIntoGame(gameId, team, discordId) }
     }
 }
-
-

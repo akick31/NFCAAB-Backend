@@ -3,7 +3,6 @@ package com.nfcaab.backend.controllers
 import com.nfcaab.backend.model.AtBat
 import com.nfcaab.backend.model.AtBat.SubmissionType
 import com.nfcaab.backend.service.discord.DiscordService
-import com.nfcaab.backend.service.nfcaab.AtBatService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -11,6 +10,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import com.nfcaab.backend.service.atbat.AtBatService
 
 class DiscordControllerTest {
     private lateinit var discordService: DiscordService

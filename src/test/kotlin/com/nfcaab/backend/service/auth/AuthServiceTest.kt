@@ -4,8 +4,6 @@ import com.nfcaab.backend.dto.website.LoginResponse
 import com.nfcaab.backend.model.NewSignup
 import com.nfcaab.backend.model.User
 import com.nfcaab.backend.service.email.EmailService
-import com.nfcaab.backend.service.nfcaab.NewSignupService
-import com.nfcaab.backend.service.nfcaab.UserService
 import com.nfcaab.backend.util.UserUnauthorizedException
 import io.mockk.Runs
 import io.mockk.every
@@ -20,6 +18,8 @@ import org.junit.jupiter.api.Test
 import org.springframework.http.ResponseEntity
 import org.springframework.security.crypto.password.PasswordEncoder
 import java.util.UUID
+import com.nfcaab.backend.service.user.UserService
+import com.nfcaab.backend.service.user.NewSignupService
 
 class AuthServiceTest {
     private lateinit var emailService: EmailService

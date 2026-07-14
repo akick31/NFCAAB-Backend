@@ -3,8 +3,6 @@ package com.nfcaab.backend.service.auth
 import com.nfcaab.backend.model.NewSignup
 import com.nfcaab.backend.dto.website.LoginResponse
 import com.nfcaab.backend.service.email.EmailService
-import com.nfcaab.backend.service.nfcaab.NewSignupService
-import com.nfcaab.backend.service.nfcaab.UserService
 import com.nfcaab.backend.service.auth.SessionService
 import com.nfcaab.backend.util.Logger
 import com.nfcaab.backend.util.UserUnauthorizedException
@@ -13,6 +11,8 @@ import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Component
 import java.time.LocalDateTime
 import java.util.UUID
+import com.nfcaab.backend.service.user.UserService
+import com.nfcaab.backend.service.user.NewSignupService
 
 @Component
 class AuthService(

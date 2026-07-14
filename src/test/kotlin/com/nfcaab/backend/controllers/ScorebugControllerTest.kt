@@ -1,10 +1,7 @@
 package com.nfcaab.backend.controllers
 
 import com.nfcaab.backend.enums.team.Conference
-import com.nfcaab.backend.service.nfcaab.GameSpecificationService.GameCategory
-import com.nfcaab.backend.service.nfcaab.GameSpecificationService.GameFilter
-import com.nfcaab.backend.service.nfcaab.GameSpecificationService.GameSort
-import com.nfcaab.backend.service.nfcaab.ScorebugService
+import com.nfcaab.backend.service.game.GameSpecificationService.GameSort
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -14,6 +11,8 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.data.domain.PageImpl
 import org.springframework.data.domain.Pageable
+import com.nfcaab.backend.service.scorebug.ScorebugService
+import com.nfcaab.backend.service.game.GameSpecificationService
 
 class ScorebugControllerTest {
     private lateinit var scorebugService: ScorebugService
