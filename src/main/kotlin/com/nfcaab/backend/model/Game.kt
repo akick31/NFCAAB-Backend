@@ -301,6 +301,7 @@ class Game {
         WALK("Walk"),
         FLYOUT("Fly out"),
         SACRIFICE_FLY("Sacrifice Fly"),
+        SACRIFICE_BUNT("Sacrifice Bunt"),
         GROUNDOUT("Ground out"),
         DOUBLE_PLAY("Double Play"),
         FIELDERS_CHOICE("Fielder's Choice"),
@@ -308,6 +309,8 @@ class Game {
         DOUBLE("Double"),
         TRIPLE("Triple"),
         HOME_RUN("Home Run"),
+        STOLEN_BASE("Stolen Base"),
+        CAUGHT_STEALING("Caught Stealing"),
         DELAY_OF_GAME("Delay of Game"),
         ;
 
@@ -330,6 +333,12 @@ class Game {
         }
     }
 
+
+    enum class Base {
+        FIRST,
+        SECOND,
+        THIRD,
+    }
 
     enum class BaseCondition(val description: String) {
         EMPTY("Empty"),

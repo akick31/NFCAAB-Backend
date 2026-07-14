@@ -148,6 +148,7 @@ class AtBatService(
                         atBat =
                             atBatResolutionService.resolveSteal(
                                 atBat,
+                                game,
                                 submissionType,
                                 batterNumberSubmission,
                                 decryptedPitcherNumber,

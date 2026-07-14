@@ -1,5 +1,6 @@
 package com.nfcaab.backend.service.atbat
 
+import com.nfcaab.backend.model.Game.ActualResult
 import com.nfcaab.backend.model.Game.BattedBallType
 import com.nfcaab.backend.model.Game.HitDirection
 import com.nfcaab.backend.model.Game.Scenario
@@ -71,10 +72,13 @@ class HitLocationServiceTest {
     }
 
     @Test
-    fun `determine always returns fly for a flyout`() {
-        val result = hitLocationService.determine(Scenario.FLYOUT, BatterArchetype.NEUTRAL, 500, 30)
+    fun `determine returns only fly or line for a flyout`() {
+        val battedBallTypes =
+            (0..99).map { seed ->
+                hitLocationService.determine(Scenario.FLYOUT, BatterArchetype.NEUTRAL, seed, 0).battedBallType
+            }.toSet()
 
-        assertEquals(BattedBallType.FLY, result.battedBallType)
+        assertEquals(setOf(BattedBallType.FLY, BattedBallType.LINE), battedBallTypes)
     }
 
     @Test
@@ -107,5 +111,46 @@ class HitLocationServiceTest {
             }
 
         counts.values.forEach { count -> assertEquals(20, count) }
+    }
+
+    @Test
+    fun `buildFieldingNotation returns null when there is no fielder position`() {
+        assertNull(hitLocationService.buildFieldingNotation(ActualResult.GROUNDOUT, null, BattedBallType.GROUND))
+    }
+
+    @Test
+    fun `buildFieldingNotation marks a first baseman groundout as unassisted`() {
+        assertEquals("3U", hitLocationService.buildFieldingNotation(ActualResult.GROUNDOUT, 3, BattedBallType.GROUND))
+    }
+
+    @Test
+    fun `buildFieldingNotation renders a routine groundout as fielder-to-first`() {
+        assertEquals("6-3", hitLocationService.buildFieldingNotation(ActualResult.GROUNDOUT, 6, BattedBallType.GROUND))
+    }
+
+    @Test
+    fun `buildFieldingNotation renders a fielders choice as fielder-to-coverer`() {
+        assertEquals("6-4", hitLocationService.buildFieldingNotation(ActualResult.FIELDERS_CHOICE, 6, BattedBallType.GROUND))
+        assertEquals("4-6", hitLocationService.buildFieldingNotation(ActualResult.FIELDERS_CHOICE, 4, BattedBallType.GROUND))
+    }
+
+    @Test
+    fun `buildFieldingNotation renders a double play as the classic three-fielder sequence`() {
+        assertEquals("6-4-3", hitLocationService.buildFieldingNotation(ActualResult.DOUBLE_PLAY, 6, BattedBallType.GROUND))
+        assertEquals("4-6-3", hitLocationService.buildFieldingNotation(ActualResult.DOUBLE_PLAY, 4, BattedBallType.GROUND))
+        assertEquals("5-6-3", hitLocationService.buildFieldingNotation(ActualResult.DOUBLE_PLAY, 5, BattedBallType.GROUND))
+    }
+
+    @Test
+    fun `buildFieldingNotation renders air outs with the fly or line prefix`() {
+        assertEquals("F8", hitLocationService.buildFieldingNotation(ActualResult.FLYOUT, 8, BattedBallType.FLY))
+        assertEquals("L7", hitLocationService.buildFieldingNotation(ActualResult.FLYOUT, 7, BattedBallType.LINE))
+        assertEquals("F9", hitLocationService.buildFieldingNotation(ActualResult.SACRIFICE_FLY, 9, BattedBallType.FLY))
+    }
+
+    @Test
+    fun `buildFieldingNotation returns null for outcomes with no fielding sequence`() {
+        assertNull(hitLocationService.buildFieldingNotation(ActualResult.SINGLE, 7, BattedBallType.LINE))
+        assertNull(hitLocationService.buildFieldingNotation(ActualResult.STRIKEOUT, null, null))
     }
 }

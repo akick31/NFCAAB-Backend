@@ -138,8 +138,8 @@ class AtBat {
     @Column(name = "fielder_position")
     var fielderPosition: Int? = null
 
-    @Column(name = "assist_sequence")
-    var assistSequence: String? = null
+    @Column(name = "fielding_notation")
+    var fieldingNotation: String? = null
 
     constructor()
 

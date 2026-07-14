@@ -25,5 +25,15 @@ interface GameLineupRepository : CrudRepository<GameLineup, Int> {
         gameId: Int,
         team: String,
     ): List<GameLineup>
+
+    @Query(
+        value = "SELECT * FROM game_lineups WHERE game_id = :gameId AND team = :team AND uniform_number = :uniformNumber AND currently_playing = true",
+        nativeQuery = true,
+    )
+    fun getCurrentLineupEntryByUniformNumber(
+        gameId: Int,
+        team: String,
+        uniformNumber: Int,
+    ): GameLineup?
 }
 

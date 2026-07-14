@@ -123,12 +123,15 @@ open class Player {
         LEFT_FIELD("Left Field"),
         CENTER_FIELD("Center Field"),
         RIGHT_FIELD("Right Field"),
+        DESIGNATED_HITTER("Designated Hitter"),
         ;
 
         companion object {
             fun fromDescription(description: String): Position {
                 return entries.first { it.description == description }
             }
+
+            val FIELD_POSITIONS: Set<Position> = entries.toSet() - PITCHER
         }
     }
 }

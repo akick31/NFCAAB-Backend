@@ -229,6 +229,71 @@ class GameLifecycleServiceTest {
     }
 
     @Test
+    fun `updateGameValues should end the game immediately on a walk off in the bottom of the ninth`() {
+        val game = scrimmageGame().apply { inningHalf = Game.InningHalf.BOTTOM; inning = 9; outs = 1; homeScore = 2; awayScore = 3 }
+        val batter = Player().apply { firstName = "First"; lastName = "Last"; uniformNumber = 12 }
+        val pitcher = Player().apply { firstName = "Pitch"; lastName = "Er"; uniformNumber = 21 }
+        val outcome =
+            AtBatOutcome(
+                actualResult = ActualResult.HOME_RUN,
+                outs = 1,
+                runsScored = 2,
+                homeScore = 4,
+                awayScore = 3,
+                runnerOnFirstAfter = null,
+                runnerOnSecondAfter = null,
+                runnerOnThirdAfter = null,
+                baseConditionAfter = Game.BaseCondition.EMPTY,
+            )
+
+        every { lineupService.getBatterByLineupSpot(any(), any(), any()) } returns batter
+        every { lineupService.getPitcherByTeam(any(), any()) } returns pitcher
+        every { teamService.getTeamByName(any()) } returns Team().apply { name = "Home Team"; ranking = 1 }
+        every { gameService.calculateDelayOfGameTimer() } returns "07/13/2026 12:00:00"
+        every { gameService.saveGame(any()) } returns game
+        every { gameStatsService.deleteByGameId(any()) } returns Unit
+        every { atBatRepository.getAllAtBatsByGameId(any()) } returns emptyList()
+        every { gameStatsService.updateGameStats(any(), any()) } returns emptyList()
+        every { gameStatsService.getGameStatsByIdAndTeam(any(), any()) } returns mockk(relaxed = true)
+        every { gameStatsService.saveGameStats(any()) } returns mockk()
+
+        val result = gameLifecycleService.updateGameValues(game, outcome)
+
+        assertEquals(GameStatus.FINAL, result.gameStatus)
+        assertEquals(9, result.inning)
+        assertEquals(Game.InningHalf.BOTTOM, result.inningHalf)
+    }
+
+    @Test
+    fun `updateGameValues should not advance the lineup spot when applying a steal`() {
+        val game = scrimmageGame().apply { inningHalf = TOP; inning = 5; outs = 1; awayBatterLineupSpot = 4 }
+        val batter = Player().apply { firstName = "First"; lastName = "Last"; uniformNumber = 12 }
+        val pitcher = Player().apply { firstName = "Pitch"; lastName = "Er"; uniformNumber = 21 }
+        val outcome =
+            AtBatOutcome(
+                actualResult = ActualResult.STOLEN_BASE,
+                outs = 1,
+                runsScored = 0,
+                homeScore = 0,
+                awayScore = 0,
+                runnerOnFirstAfter = null,
+                runnerOnSecondAfter = batter,
+                runnerOnThirdAfter = null,
+                baseConditionAfter = Game.BaseCondition.SECOND,
+            )
+
+        every { lineupService.getBatterByLineupSpot(any(), any(), any()) } returns batter
+        every { lineupService.getPitcherByTeam(any(), any()) } returns pitcher
+        every { teamService.getTeamByName(any()) } returns Team().apply { name = "Home Team"; ranking = 1 }
+        every { gameService.calculateDelayOfGameTimer() } returns "07/13/2026 12:00:00"
+
+        val result = gameLifecycleService.updateGameValues(game, outcome, false)
+
+        assertEquals(4, result.awayBatterLineupSpot)
+        assertEquals(TeamSide.HOME, result.waitingOn)
+    }
+
+    @Test
     fun `updateGameValues should still play the bottom of the ninth when the home team is not leading`() {
         val game = scrimmageGame().apply { inningHalf = TOP; inning = 9; outs = 2; homeBatterLineupSpot = 1; awayBatterLineupSpot = 9 }
         val batter = Player().apply { firstName = "First"; lastName = "Last"; uniformNumber = 12 }
@@ -409,6 +474,34 @@ class GameLifecycleServiceTest {
 
         assertThrows(TeamNotFoundException::class.java) {
             gameLifecycleService.subCoachIntoGame(game.id, "Unknown Team", "discord9")
+        }
+    }
+
+    @Test
+    fun `pinchRun should replace the runner on the given base and update the lineup`() {
+        val game = scrimmageGame().apply { runnerOnSecond = 5 }
+
+        every { gameService.getGameById(game.id) } returns game
+        every { lineupService.getCurrentPosition(game.id, "Away Team", 5) } returns Player.Position.SECOND_BASE
+        every {
+            lineupService.substituteBatter(game.id, "Away Team", 5, 15, Player.Position.SECOND_BASE)
+        } returns mockk(relaxed = true)
+        every { gameService.saveGame(any()) } returns game
+
+        val result = gameLifecycleService.pinchRun(game.id, "Away Team", Game.Base.SECOND, 15)
+
+        assertEquals(15, result.runnerOnSecond)
+        verify { lineupService.substituteBatter(game.id, "Away Team", 5, 15, Player.Position.SECOND_BASE) }
+    }
+
+    @Test
+    fun `pinchRun should throw when there is no runner on the requested base`() {
+        val game = scrimmageGame().apply { runnerOnFirst = null }
+
+        every { gameService.getGameById(game.id) } returns game
+
+        assertThrows(com.nfcaab.backend.util.PlayerNotFoundException::class.java) {
+            gameLifecycleService.pinchRun(game.id, "Away Team", Game.Base.FIRST, 15)
         }
     }
 

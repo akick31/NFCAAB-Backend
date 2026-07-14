@@ -136,13 +136,13 @@ class AtBatServiceTest {
         every { atBatRepository.getAtBatById(9) } returns pendingAtBat
         every { encryptionUtils.decrypt("encrypted-pitcher-42") } returns "42"
         every {
-            atBatResolutionService.resolveSteal(pendingAtBat, SubmissionType.STEAL, 17, "42")
+            atBatResolutionService.resolveSteal(pendingAtBat, game, SubmissionType.STEAL, 17, "42")
         } returns resolvedAtBat
 
         val result = atBatService.batterNumberSubmitted(gameId, "batterUser", 17, SubmissionType.STEAL)
 
         assertEquals(resolvedAtBat, result)
-        verify { atBatResolutionService.resolveSteal(pendingAtBat, SubmissionType.STEAL, 17, "42") }
+        verify { atBatResolutionService.resolveSteal(pendingAtBat, game, SubmissionType.STEAL, 17, "42") }
     }
 
     @Test

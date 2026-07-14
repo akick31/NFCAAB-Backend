@@ -1,5 +1,6 @@
 package com.nfcaab.backend.controllers
 
+import com.nfcaab.backend.dto.requests.PinchRunRequest
 import com.nfcaab.backend.dto.requests.StartRequest
 import com.nfcaab.backend.model.Game
 import com.nfcaab.backend.service.game.GameSpecificationService.GameCategory
@@ -175,5 +176,13 @@ class GameController(
         @RequestParam("discordId") discordId: String,
     ): ResponseEntity<Game> {
         return ResponseEntity.ok(gameLifecycleService.subCoachIntoGame(gameId, team, discordId))
+    }
+
+    @PutMapping("/{gameId}/pinch-run")
+    fun pinchRun(
+        @PathVariable("gameId") gameId: Int,
+        @RequestBody request: PinchRunRequest,
+    ): ResponseEntity<Game> {
+        return ResponseEntity.ok(gameLifecycleService.pinchRun(gameId, request.team, request.base, request.incomingUniformNumber))
     }
 }

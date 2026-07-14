@@ -1,6 +1,7 @@
 package com.nfcaab.backend.controllers
 
 import com.nfcaab.backend.dto.requests.LineupSubmissionRequest
+import com.nfcaab.backend.dto.requests.LineupSubstitutionRequest
 import com.nfcaab.backend.model.GameLineup
 import com.nfcaab.backend.model.LineupToken
 import org.springframework.web.bind.annotation.CrossOrigin
@@ -41,5 +42,18 @@ class LineupController(
         @RequestBody request: LineupSubmissionRequest,
     ): List<GameLineup> {
         return lineupService.saveLineup(request)
+    }
+
+    @PostMapping("/substitute")
+    fun substituteBatter(
+        @RequestBody request: LineupSubstitutionRequest,
+    ): GameLineup {
+        return lineupService.substituteBatter(
+            request.gameId,
+            request.team,
+            request.outgoingUniformNumber,
+            request.incomingUniformNumber,
+            request.incomingPosition,
+        )
     }
 }

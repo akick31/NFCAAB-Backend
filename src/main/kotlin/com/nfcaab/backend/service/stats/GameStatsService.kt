@@ -232,7 +232,10 @@ class GameStatsService(
     private fun calculateAtBats(atBats: List<AtBat>): Int {
         return atBats.count { pa ->
             pa.actualResult != ActualResult.WALK &&
-                pa.actualResult != ActualResult.SACRIFICE_FLY
+                pa.actualResult != ActualResult.SACRIFICE_FLY &&
+                pa.actualResult != ActualResult.SACRIFICE_BUNT &&
+                pa.actualResult != ActualResult.STOLEN_BASE &&
+                pa.actualResult != ActualResult.CAUGHT_STEALING
         }
     }
 

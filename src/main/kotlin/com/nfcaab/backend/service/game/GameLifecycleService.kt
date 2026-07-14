@@ -24,6 +24,7 @@ import com.nfcaab.backend.service.user.UserService
 import com.nfcaab.backend.util.Logger
 import com.nfcaab.backend.util.NoCoachDiscordIdFoundException
 import com.nfcaab.backend.util.NoCoachFoundException
+import com.nfcaab.backend.util.PlayerNotFoundException
 import com.nfcaab.backend.util.TeamNotFoundException
 import com.nfcaab.backend.util.UnableToCreateGameThreadException
 import com.nfcaab.backend.util.UnableToDeleteGameException
@@ -172,11 +173,14 @@ class GameLifecycleService(
     fun updateGameValues(
         game: Game,
         outcome: AtBatOutcome,
+        advanceLineupSpot: Boolean = true,
     ): Game {
-        if (game.inningHalf == TOP) {
-            game.awayBatterLineupSpot = if (game.awayBatterLineupSpot == 9) 1 else game.awayBatterLineupSpot + 1
-        } else {
-            game.homeBatterLineupSpot = if (game.homeBatterLineupSpot == 9) 1 else game.homeBatterLineupSpot + 1
+        if (advanceLineupSpot) {
+            if (game.inningHalf == TOP) {
+                game.awayBatterLineupSpot = if (game.awayBatterLineupSpot == 9) 1 else game.awayBatterLineupSpot + 1
+            } else {
+                game.homeBatterLineupSpot = if (game.homeBatterLineupSpot == 9) 1 else game.homeBatterLineupSpot + 1
+            }
         }
         if (outcome.outs >= 3) {
             val inningHalf = if (game.inningHalf == TOP) BOTTOM else TOP
@@ -214,6 +218,14 @@ class GameLifecycleService(
         game.gameTimer = gameService.calculateDelayOfGameTimer()
         updateCloseGame(game)
         updateUpsetAlert(game)
+
+        if (game.gameStatus != GameStatus.FINAL &&
+            game.inningHalf == BOTTOM &&
+            game.inning >= 9 &&
+            game.homeScore > game.awayScore
+        ) {
+            game.gameStatus = GameStatus.FINAL
+        }
 
         if (game.gameStatus == GameStatus.FINAL) {
             endGame(game)
@@ -465,6 +477,32 @@ class GameLifecycleService(
                 throw TeamNotFoundException("$team not found in game $id")
             }
         }
+        return gameService.saveGame(game)
+    }
+
+    fun pinchRun(
+        gameId: Int,
+        team: String,
+        base: Game.Base,
+        incomingUniformNumber: Int,
+    ): Game {
+        val game = gameService.getGameById(gameId)
+        val outgoingUniformNumber =
+            when (base) {
+                Game.Base.FIRST -> game.runnerOnFirst
+                Game.Base.SECOND -> game.runnerOnSecond
+                Game.Base.THIRD -> game.runnerOnThird
+            } ?: throw PlayerNotFoundException("No runner on $base for game $gameId")
+
+        val position = lineupService.getCurrentPosition(gameId, team, outgoingUniformNumber)
+        lineupService.substituteBatter(gameId, team, outgoingUniformNumber, incomingUniformNumber, position)
+
+        when (base) {
+            Game.Base.FIRST -> game.runnerOnFirst = incomingUniformNumber
+            Game.Base.SECOND -> game.runnerOnSecond = incomingUniformNumber
+            Game.Base.THIRD -> game.runnerOnThird = incomingUniformNumber
+        }
+
         return gameService.saveGame(game)
     }
 }

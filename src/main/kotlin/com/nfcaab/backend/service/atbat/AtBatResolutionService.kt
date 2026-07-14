@@ -4,7 +4,6 @@ import com.nfcaab.backend.dto.AtBatOutcome
 import com.nfcaab.backend.model.AtBat
 import com.nfcaab.backend.model.AtBat.SubmissionType
 import com.nfcaab.backend.model.Game
-import com.nfcaab.backend.model.Game.ActualResult
 import com.nfcaab.backend.model.Game.Scenario
 import com.nfcaab.backend.model.Player
 import com.nfcaab.backend.repositories.AtBatRepository
@@ -82,9 +81,75 @@ class AtBatResolutionService(
                 game.homeScore,
                 game.awayScore,
                 hitLocation.direction,
+                batter,
+                submissionType,
             )
 
         gameLifecycleService.updateGameValues(game, outcome)
+        scorebugService.generateScorebug(game)
+
+        val allAtBats = atBatRepository.getAllAtBatsByGameId(game.id)
+        gameStatsService.updateGameStats(game, allAtBats)
+
+        val resolvedHitLocation =
+            hitLocation.copy(
+                fieldingNotation =
+                    hitLocationService.buildFieldingNotation(
+                        outcome.actualResult,
+                        hitLocation.fielderPosition,
+                        hitLocation.battedBallType,
+                    ),
+            )
+
+        return updateAtBatValues(
+            atBat,
+            submissionType,
+            result,
+            outcome,
+            decryptedPitcherNumber.toInt(),
+            batterNumberSubmission,
+            difference,
+            resolvedHitLocation,
+        )
+    }
+
+    fun resolveSteal(
+        atBat: AtBat,
+        game: Game,
+        submissionType: SubmissionType,
+        batterNumberSubmission: Int,
+        decryptedPitcherNumber: String,
+    ): AtBat {
+        val difference = gameService.getDifference(batterNumberSubmission, decryptedPitcherNumber.toInt())
+        val runnerOnFirst = atBat.runnerOnFirst?.let { playerService.getPlayerByNumberAndTeam(atBat.battingTeam ?: "", it) }
+        val runnerOnSecond = atBat.runnerOnSecond?.let { playerService.getPlayerByNumberAndTeam(atBat.battingTeam ?: "", it) }
+        val runnerOnThird = atBat.runnerOnThird?.let { playerService.getPlayerByNumberAndTeam(atBat.battingTeam ?: "", it) }
+        val runner = baseRunningService.leadRunner(runnerOnFirst, runnerOnSecond, runnerOnThird)
+        val pitcher =
+            playerService.getPlayerByNumberAndTeam(
+                atBat.pitchingTeam ?: "",
+                decryptedPitcherNumber.toIntOrNull(),
+            )
+        val result =
+            baseRunningService.resolveSteal(
+                runner.batterArchetype ?: Player.BatterArchetype.NEUTRAL,
+                pitcher.pitcherArchetype ?: Player.PitcherArchetype.NEUTRAL,
+                difference,
+            )
+
+        val outcome =
+            baseRunningService.resolveStealOutcome(
+                result,
+                game.outs,
+                game.inningHalf,
+                runnerOnFirst,
+                runnerOnSecond,
+                runnerOnThird,
+                game.homeScore,
+                game.awayScore,
+            )
+
+        gameLifecycleService.updateGameValues(game, outcome, false)
         scorebugService.generateScorebug(game)
 
         val allAtBats = atBatRepository.getAllAtBatsByGameId(game.id)
@@ -98,43 +163,8 @@ class AtBatResolutionService(
             decryptedPitcherNumber.toInt(),
             batterNumberSubmission,
             difference,
-            hitLocation,
+            HitLocation(null, null, null),
         )
-    }
-
-    fun resolveSteal(
-        atBat: AtBat,
-        submissionType: SubmissionType,
-        batterNumberSubmission: Int,
-        decryptedPitcherNumber: String,
-    ): AtBat {
-        val difference = gameService.getDifference(batterNumberSubmission, decryptedPitcherNumber.toInt())
-        val runner =
-            playerService.getPlayerByNumberAndTeam(
-                atBat.battingTeam ?: "",
-                atBat.batterUniformNumber,
-            )
-        val pitcher =
-            playerService.getPlayerByNumberAndTeam(
-                atBat.pitchingTeam ?: "",
-                decryptedPitcherNumber.toIntOrNull(),
-            )
-        val result =
-            baseRunningService.resolveSteal(
-                runner.batterArchetype ?: Player.BatterArchetype.NEUTRAL,
-                pitcher.pitcherArchetype ?: Player.PitcherArchetype.NEUTRAL,
-                difference,
-            )
-
-        atBat.result = result
-        atBat.actualResult = if (result == Scenario.STEAL_SUCCESS) ActualResult.SINGLE else ActualResult.STRIKEOUT
-        atBat.difference = difference
-        atBat.submissionType = submissionType
-        atBat.batterNumberSubmission = encryptionUtils.encrypt(batterNumberSubmission.toString())
-        atBat.pitcherNumberSubmission = encryptionUtils.encrypt(decryptedPitcherNumber)
-        atBat.atBatFinished = true
-
-        return saveAtBat(atBat)
     }
 
     fun resolveIntentionalWalk(
@@ -145,6 +175,11 @@ class AtBatResolutionService(
         decryptedPitcherNumber: String,
     ): AtBat {
         val difference = gameService.getDifference(batterNumberSubmission, decryptedPitcherNumber.toInt())
+        val batter =
+            playerService.getPlayerByNumberAndTeam(
+                atBat.battingTeam ?: "",
+                atBat.batterUniformNumber,
+            )
         val runnerOnFirst = atBat.runnerOnFirst?.let { playerService.getPlayerByNumberAndTeam(atBat.battingTeam ?: "", it) }
         val runnerOnSecond = atBat.runnerOnSecond?.let { playerService.getPlayerByNumberAndTeam(atBat.battingTeam ?: "", it) }
         val runnerOnThird = atBat.runnerOnThird?.let { playerService.getPlayerByNumberAndTeam(atBat.battingTeam ?: "", it) }
@@ -162,6 +197,7 @@ class AtBatResolutionService(
                 game.homeScore,
                 game.awayScore,
                 null,
+                batter,
             )
 
         gameLifecycleService.updateGameValues(game, outcome)
@@ -207,7 +243,7 @@ class AtBatResolutionService(
         atBat.hitDirection = hitLocation.direction
         atBat.battedBallType = hitLocation.battedBallType
         atBat.fielderPosition = hitLocation.fielderPosition
-        atBat.assistSequence = hitLocation.assistSequence
+        atBat.fieldingNotation = hitLocation.fieldingNotation
         atBat.atBatFinished = true
 
         return saveAtBat(atBat)

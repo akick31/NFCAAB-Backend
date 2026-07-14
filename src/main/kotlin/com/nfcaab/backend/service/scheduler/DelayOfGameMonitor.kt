@@ -138,6 +138,12 @@ class DelayOfGameMonitor(
                 applyBatterDelayOfGame(game, currentAtBat)
             } else {
                 val runsScored = applyDelayOfGameHomeRun(game)
+                if (game.inningHalf == Game.InningHalf.BOTTOM &&
+                    game.inning >= 9 &&
+                    game.homeScore > game.awayScore
+                ) {
+                    game.gameStatus = Game.GameStatus.FINAL
+                }
                 saveDelayOfGameOnOffenseAtBat(game, runsScored)
             }
 

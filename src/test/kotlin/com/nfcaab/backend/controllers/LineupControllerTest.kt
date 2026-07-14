@@ -1,8 +1,10 @@
 package com.nfcaab.backend.controllers
 
+import com.nfcaab.backend.dto.requests.BatterSubmission
 import com.nfcaab.backend.dto.requests.LineupSubmissionRequest
 import com.nfcaab.backend.model.GameLineup
 import com.nfcaab.backend.model.LineupToken
+import com.nfcaab.backend.model.Player
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -24,12 +26,25 @@ class LineupControllerTest {
         lineupController = LineupController(lineupService, lineupTokenService)
     }
 
+    private fun fullLineupBatters() =
+        listOf(
+            BatterSubmission(1, Player.Position.CATCHER),
+            BatterSubmission(2, Player.Position.FIRST_BASE),
+            BatterSubmission(3, Player.Position.SECOND_BASE),
+            BatterSubmission(4, Player.Position.THIRD_BASE),
+            BatterSubmission(5, Player.Position.SHORTSTOP),
+            BatterSubmission(6, Player.Position.LEFT_FIELD),
+            BatterSubmission(7, Player.Position.CENTER_FIELD),
+            BatterSubmission(8, Player.Position.RIGHT_FIELD),
+            BatterSubmission(9, Player.Position.DESIGNATED_HITTER),
+        )
+
     @Test
     fun `submitLineup should return list of GameLineup entries`() {
         val request =
             LineupSubmissionRequest(
                 token = "test-token",
-                batters = listOf(1, 2, 3, 4, 5, 6, 7, 8, 9),
+                batters = fullLineupBatters(),
                 pitcher = 10,
             )
 

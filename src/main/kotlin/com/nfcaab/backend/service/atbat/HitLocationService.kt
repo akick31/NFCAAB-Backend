@@ -1,6 +1,7 @@
 package com.nfcaab.backend.service.atbat
 
 import com.nfcaab.backend.model.Game
+import com.nfcaab.backend.model.Game.ActualResult
 import com.nfcaab.backend.model.Game.Scenario
 import com.nfcaab.backend.model.Player.BatterArchetype
 import org.springframework.stereotype.Service
@@ -9,7 +10,7 @@ data class HitLocation(
     val direction: Game.HitDirection?,
     val battedBallType: Game.BattedBallType?,
     val fielderPosition: Int?,
-    val assistSequence: String? = null,
+    val fieldingNotation: String? = null,
 )
 
 @Service
@@ -80,7 +81,9 @@ class HitLocationService {
         battersNumber: Int,
         difference: Int,
     ): Game.BattedBallType {
-        if (scenario == Scenario.FLYOUT) return Game.BattedBallType.FLY
+        if (scenario == Scenario.FLYOUT) {
+            return if ((battersNumber * 7 + difference * 3) % 100 < 30) Game.BattedBallType.LINE else Game.BattedBallType.FLY
+        }
         if (scenario == Scenario.LEFT_GROUNDOUT || scenario == Scenario.RIGHT_GROUNDOUT) return Game.BattedBallType.GROUND
 
         val seed = (battersNumber * 7 + difference * 3) % 100
@@ -114,4 +117,22 @@ class HitLocationService {
                 Game.HitDirection.RIGHT -> 9
             }
         }
+
+    fun buildFieldingNotation(
+        actualResult: ActualResult?,
+        fielderPosition: Int?,
+        battedBallType: Game.BattedBallType?,
+    ): String? {
+        if (fielderPosition == null) return null
+        return when (actualResult) {
+            ActualResult.GROUNDOUT, ActualResult.SACRIFICE_BUNT -> if (fielderPosition == 3) "3U" else "$fielderPosition-3"
+            ActualResult.FIELDERS_CHOICE -> "$fielderPosition-${forceCoverer(fielderPosition)}"
+            ActualResult.DOUBLE_PLAY -> "$fielderPosition-${forceCoverer(fielderPosition)}-3"
+            ActualResult.FLYOUT, ActualResult.SACRIFICE_FLY ->
+                if (battedBallType == Game.BattedBallType.LINE) "L$fielderPosition" else "F$fielderPosition"
+            else -> null
+        }
+    }
+
+    private fun forceCoverer(fielderPosition: Int): Int = if (fielderPosition == 6) 4 else 6
 }

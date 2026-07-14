@@ -1,5 +1,6 @@
 package com.nfcaab.backend.service.lineup
 
+import com.nfcaab.backend.dto.requests.BatterSubmission
 import com.nfcaab.backend.dto.requests.LineupSubmissionRequest
 import com.nfcaab.backend.model.GameLineup
 import com.nfcaab.backend.model.Player
@@ -37,6 +38,16 @@ class LineupService(
         team: String,
     ): Player = getBatterByLineupSpotAndTeam(gameId, team, lineupSpot)
 
+    fun getCurrentPosition(
+        gameId: Int,
+        team: String,
+        uniformNumber: Int,
+    ): Player.Position {
+        val entry = gameLineupRepository.getCurrentLineupEntryByUniformNumber(gameId, team, uniformNumber)
+            ?: throw PlayerNotFoundException("$uniformNumber is not currently in the lineup for team $team")
+        return Player.Position.fromDescription(entry.position ?: "Unknown")
+    }
+
     fun getPitcherByTeam(
         gameId: Int,
         team: String,
@@ -57,15 +68,15 @@ class LineupService(
 
         val lineupEntries = mutableListOf<GameLineup>()
 
-        request.batters.forEachIndexed { index, batterUniformNumber ->
-            val player = playerService.getPlayerByNumberAndTeam(team, batterUniformNumber)
+        request.batters.forEachIndexed { index, batter ->
+            val player = playerService.getPlayerByNumberAndTeam(team, batter.uniformNumber)
             val lineupEntry = GameLineup().apply {
                 this.gameId = gameId.toString()
                 this.team = team
                 lineupSpot = (index + 1).toString()
                 name = "${player.firstName} ${player.lastName}"
-                uniformNumber = batterUniformNumber
-                position = player.primaryPosition?.description ?: "Unknown"
+                uniformNumber = batter.uniformNumber
+                position = batter.position.description
                 archetype = player.batterArchetype?.description ?: "Neutral"
                 currentlyPlaying = true
                 hasAppeared = false
@@ -96,6 +107,86 @@ class LineupService(
         return lineupEntries
     }
 
+    fun substituteBatter(
+        gameId: Int,
+        team: String,
+        outgoingUniformNumber: Int,
+        incomingUniformNumber: Int,
+        incomingPosition: Player.Position,
+    ): GameLineup {
+        if (incomingPosition !in Player.Position.FIELD_POSITIONS) {
+            throw InvalidLineupException("$incomingPosition is not a valid position for a batter")
+        }
+
+        val outgoingEntry = gameLineupRepository.getCurrentLineupEntryByUniformNumber(gameId, team, outgoingUniformNumber)
+            ?: throw PlayerNotFoundException("$outgoingUniformNumber is not currently in the lineup for team $team")
+        val lineupSpot = outgoingEntry.lineupSpot ?: throw InvalidLineupException("Outgoing player has no lineup spot")
+        if (lineupSpot == "P") {
+            throw InvalidLineupException("Use substitutePitcher to replace a pitcher")
+        }
+
+        val incomingPlayer = playerService.getPlayerByNumberAndTeam(team, incomingUniformNumber)
+        if (incomingPlayer.currentTeam != team) {
+            throw InvalidLineupException("Player with uniform number $incomingUniformNumber is not on team $team")
+        }
+
+        val currentlyPlayingNumbers =
+            gameLineupRepository.getAllLineupsByGameIdAndTeam(gameId, team)
+                .filter { it.currentlyPlaying == true }
+                .mapNotNull { it.uniformNumber }
+        if (incomingUniformNumber in currentlyPlayingNumbers) {
+            throw InvalidLineupException("Player with uniform number $incomingUniformNumber is already in the game")
+        }
+
+        outgoingEntry.currentlyPlaying = false
+        gameLineupRepository.save(outgoingEntry)
+
+        val incomingEntry = GameLineup().apply {
+            this.gameId = gameId.toString()
+            this.team = team
+            this.lineupSpot = lineupSpot
+            name = "${incomingPlayer.firstName} ${incomingPlayer.lastName}"
+            uniformNumber = incomingUniformNumber
+            position = incomingPosition.description
+            archetype = incomingPlayer.batterArchetype?.description ?: "Neutral"
+            currentlyPlaying = true
+            hasAppeared = false
+        }
+        return gameLineupRepository.save(incomingEntry) ?: throw InvalidLineupException("Failed to save substitution")
+    }
+
+    fun substitutePitcher(
+        gameId: Int,
+        team: String,
+        incomingUniformNumber: Int,
+    ): GameLineup {
+        val outgoingEntry = gameLineupRepository.getPitcherByTeam(gameId, team)
+            ?: throw PlayerNotFoundException("Pitcher not found for team $team")
+
+        val incomingPitcher = playerService.getPlayerByNumberAndTeam(team, incomingUniformNumber)
+        if (incomingPitcher.currentTeam != team) {
+            throw InvalidLineupException("Player with uniform number $incomingUniformNumber is not on team $team")
+        }
+
+        validateRotationRest(incomingPitcher)
+
+        outgoingEntry.currentlyPlaying = false
+        gameLineupRepository.save(outgoingEntry)
+
+        val incomingEntry = GameLineup().apply {
+            this.gameId = gameId.toString()
+            this.team = team
+            lineupSpot = "P"
+            name = "${incomingPitcher.firstName} ${incomingPitcher.lastName}"
+            uniformNumber = incomingUniformNumber
+            position = "Pitcher"
+            archetype = incomingPitcher.pitcherArchetype?.description ?: "Neutral"
+            currentlyPlaying = true
+            hasAppeared = false
+        }
+        return gameLineupRepository.save(incomingEntry) ?: throw InvalidLineupException("Failed to save pitching change")
+    }
+
     private fun validateLineup(
         request: LineupSubmissionRequest,
         gameId: Int,
@@ -105,16 +196,27 @@ class LineupService(
             throw InvalidLineupException("Lineup must have exactly 9 batters, got ${request.batters.size}")
         }
 
-        val duplicateBatters = request.batters.groupingBy { it }.eachCount().filter { it.value > 1 }
+        val duplicateBatters = request.batters.groupingBy { it.uniformNumber }.eachCount().filter { it.value > 1 }
         if (duplicateBatters.isNotEmpty()) {
             throw InvalidLineupException("Duplicate batters found: ${duplicateBatters.keys.joinToString()}")
         }
 
-        if (request.pitcher in request.batters) {
+        val submittedPositions = request.batters.map { it.position }
+        val missingPositions = Player.Position.FIELD_POSITIONS - submittedPositions.toSet()
+        if (missingPositions.isNotEmpty()) {
+            throw InvalidLineupException("Lineup is missing positions: ${missingPositions.joinToString { it.description }}")
+        }
+        val duplicatePositions = submittedPositions.groupingBy { it }.eachCount().filter { it.value > 1 }
+        if (duplicatePositions.isNotEmpty()) {
+            throw InvalidLineupException("Duplicate positions found: ${duplicatePositions.keys.joinToString { it.description }}")
+        }
+
+        val batterUniformNumbers = request.batters.map { it.uniformNumber }
+        if (request.pitcher in batterUniformNumbers) {
             throw InvalidLineupException("Pitcher cannot be in the batting lineup")
         }
 
-        val allUniformNumbers = request.batters + request.pitcher
+        val allUniformNumbers = batterUniformNumbers + request.pitcher
         allUniformNumbers.forEach { uniformNumber ->
             try {
                 val player = playerService.getPlayerByNumberAndTeam(team, uniformNumber)
@@ -127,14 +229,18 @@ class LineupService(
         }
 
         val startingPitcher = playerService.getPlayerByNumberAndTeam(team, request.pitcher)
-        val lastStartGameId = startingPitcher.lastStartGameId
-        if (startingPitcher.pitcherRole == Player.PitcherRole.STARTER && lastStartGameId != null) {
-            val gamesSinceLastStart = gameRepository.countFinishedGamesByTeamSinceGameId(team, lastStartGameId)
+        validateRotationRest(startingPitcher)
+    }
+
+    private fun validateRotationRest(pitcher: Player) {
+        val lastStartGameId = pitcher.lastStartGameId
+        if (pitcher.pitcherRole == Player.PitcherRole.STARTER && lastStartGameId != null) {
+            val gamesSinceLastStart = gameRepository.countFinishedGamesByTeamSinceGameId(pitcher.currentTeam ?: "", lastStartGameId)
             if (gamesSinceLastStart < MINIMUM_STARTER_REST_GAMES) {
                 throw InvalidLineupException(
-                    "${startingPitcher.firstName} ${startingPitcher.lastName} has only had " +
+                    "${pitcher.firstName} ${pitcher.lastName} has only had " +
                         "$gamesSinceLastStart game(s) of rest since their last start " +
-                        "(needs $MINIMUM_STARTER_REST_GAMES) and is not eligible to start",
+                        "(needs $MINIMUM_STARTER_REST_GAMES) and is not eligible to pitch",
                 )
             }
         }
