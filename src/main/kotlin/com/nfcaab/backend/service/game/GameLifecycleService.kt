@@ -19,6 +19,7 @@ import com.nfcaab.backend.service.lineup.LineupService
 import com.nfcaab.backend.service.schedule.ScheduleService
 import com.nfcaab.backend.service.schedule.SeasonService
 import com.nfcaab.backend.service.stats.GameStatsService
+import com.nfcaab.backend.service.stats.PitcherDecisionService
 import com.nfcaab.backend.service.team.TeamService
 import com.nfcaab.backend.service.user.UserService
 import com.nfcaab.backend.util.Logger
@@ -40,6 +41,7 @@ class GameLifecycleService(
     private val discordService: DiscordService,
     private val userService: UserService,
     private val gameStatsService: GameStatsService,
+    private val pitcherDecisionService: PitcherDecisionService,
     private val seasonService: SeasonService,
     private val scheduleService: ScheduleService,
     private val lineupService: LineupService,
@@ -202,11 +204,17 @@ class GameLifecycleService(
             game.runnerOnFirst = null
             game.runnerOnSecond = null
             game.runnerOnThird = null
+            game.runnerOnFirstPitcher = null
+            game.runnerOnSecondPitcher = null
+            game.runnerOnThirdPitcher = null
         } else {
             game.outs = outcome.outs
             game.runnerOnFirst = outcome.runnerOnFirstAfter?.uniformNumber
             game.runnerOnSecond = outcome.runnerOnSecondAfter?.uniformNumber
             game.runnerOnThird = outcome.runnerOnThirdAfter?.uniformNumber
+            game.runnerOnFirstPitcher = outcome.runnerOnFirstPitcherAfter
+            game.runnerOnSecondPitcher = outcome.runnerOnSecondPitcherAfter
+            game.runnerOnThirdPitcher = outcome.runnerOnThirdPitcherAfter
         }
 
         updateWaitingOn(game)
@@ -337,6 +345,9 @@ class GameLifecycleService(
             game.runnerOnFirst = previousAtBat.runnerOnFirst
             game.runnerOnSecond = previousAtBat.runnerOnSecond
             game.runnerOnThird = previousAtBat.runnerOnThird
+            game.runnerOnFirstPitcher = previousAtBat.runnerOnFirstPitcher
+            game.runnerOnSecondPitcher = previousAtBat.runnerOnSecondPitcher
+            game.runnerOnThirdPitcher = previousAtBat.runnerOnThirdPitcher
             game.waitingOn = if (previousAtBat.inningHalf == TOP) TeamSide.HOME else TeamSide.AWAY
             game.gameTimer = gameService.calculateDelayOfGameTimer()
             if (game.inningHalf == TOP) {
@@ -368,8 +379,10 @@ class GameLifecycleService(
     ): Game {
         if (delayOfGameInstances.first >= 3) {
             game.runnerOnThird = game.awayBatterLineupSpot
+            game.runnerOnThirdPitcher = game.pitcherUniformNumber
         } else if (delayOfGameInstances.second >= 3) {
             game.runnerOnThird = game.homeBatterLineupSpot
+            game.runnerOnThirdPitcher = game.pitcherUniformNumber
         }
         val updatedGame = gameService.saveGame(game)
         endGame(updatedGame)
@@ -418,6 +431,8 @@ class GameLifecycleService(
             awayStats.gameStatus = GameStatus.FINAL
             gameStatsService.saveGameStats(homeStats)
             gameStatsService.saveGameStats(awayStats)
+
+            pitcherDecisionService.computeDecisions(game)
 
             if (game.gameType != GameType.SCRIMMAGE && game.season != null) {
                 gameStatsService.aggregateStatsAfterGame(game)

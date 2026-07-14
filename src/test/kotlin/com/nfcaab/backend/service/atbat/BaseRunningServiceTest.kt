@@ -50,15 +50,19 @@ class BaseRunningServiceTest {
 
     @Test
     fun `resolveOutcome for a home run with bases loaded scores four runs`() {
+        val runnerOnFirst = Player()
+        val runnerOnSecond = Player()
+        val runnerOnThird = Player()
+
         val outcome =
             baseRunningService.resolveOutcome(
                 Scenario.HOME_RUN,
                 1,
                 InningHalf.TOP,
                 BaseCondition.BASED_LOADED,
-                Player(),
-                Player(),
-                Player(),
+                runnerOnFirst,
+                runnerOnSecond,
+                runnerOnThird,
                 3,
                 2,
                 null,
@@ -69,6 +73,7 @@ class BaseRunningServiceTest {
         assertEquals(4, outcome.runsScored)
         assertEquals(6, outcome.awayScore)
         assertEquals(BaseCondition.EMPTY, outcome.baseConditionAfter)
+        assertEquals(listOf(runnerOnFirst, runnerOnSecond, runnerOnThird, batter), outcome.scoringRunners)
     }
 
     @Test
@@ -208,6 +213,7 @@ class BaseRunningServiceTest {
         assertEquals(1, outcome.runsScored)
         assertEquals(null, outcome.runnerOnThirdAfter)
         assertEquals(batter, outcome.runnerOnFirstAfter)
+        assertEquals(listOf(neutralRunner), outcome.scoringRunners)
     }
 
     @Test
@@ -231,6 +237,7 @@ class BaseRunningServiceTest {
 
         assertEquals(1, outcome.runsScored)
         assertEquals(BaseCondition.FIRST, outcome.baseConditionAfter)
+        assertEquals(listOf(speedyRunner), outcome.scoringRunners)
     }
 
     @Test
@@ -277,6 +284,7 @@ class BaseRunningServiceTest {
 
         assertEquals(1, outcome.runsScored)
         assertEquals(BaseCondition.FIRST, outcome.baseConditionAfter)
+        assertEquals(listOf(neutralRunner), outcome.scoringRunners)
     }
 
     @Test
@@ -326,6 +334,7 @@ class BaseRunningServiceTest {
         assertEquals(1, outcome.runsScored)
         assertEquals(BaseCondition.SECOND, outcome.baseConditionAfter)
         assertEquals(null, outcome.runnerOnThirdAfter)
+        assertEquals(listOf(neutralRunner), outcome.scoringRunners)
     }
 
     @Test
@@ -352,6 +361,7 @@ class BaseRunningServiceTest {
         assertEquals(1, outcome.awayScore)
         assertEquals(BaseCondition.SECOND_THIRD, outcome.baseConditionAfter)
         assertEquals(runnerOnFirst, outcome.runnerOnThirdAfter)
+        assertEquals(listOf(runnerOnThird), outcome.scoringRunners)
     }
 
     @Test
@@ -378,6 +388,7 @@ class BaseRunningServiceTest {
         assertEquals(2, outcome.awayScore)
         assertEquals(BaseCondition.SECOND, outcome.baseConditionAfter)
         assertEquals(null, outcome.runnerOnThirdAfter)
+        assertEquals(listOf(runnerOnThird, runnerOnFirst), outcome.scoringRunners)
     }
 
     @Test
@@ -528,6 +539,34 @@ class BaseRunningServiceTest {
         assertEquals(BaseCondition.FIRST_THIRD, outcome.baseConditionAfter)
         assertEquals(batter, outcome.runnerOnFirstAfter)
         assertEquals(runnerOnSecond, outcome.runnerOnThirdAfter)
+        assertEquals(listOf(runnerOnThird), outcome.scoringRunners)
+    }
+
+    @Test
+    fun `resolveOutcome for a right-side groundout with a runner on third scores them`() {
+        val runnerOnThird = Player().apply { batterArchetype = Player.BatterArchetype.NEUTRAL }
+
+        val outcome =
+            baseRunningService.resolveOutcome(
+                Scenario.RIGHT_GROUNDOUT,
+                0,
+                InningHalf.TOP,
+                BaseCondition.THIRD,
+                null,
+                null,
+                runnerOnThird,
+                0,
+                0,
+                null,
+                batter,
+            )
+
+        assertEquals(ActualResult.GROUNDOUT, outcome.actualResult)
+        assertEquals(1, outcome.outs)
+        assertEquals(1, outcome.runsScored)
+        assertEquals(1, outcome.awayScore)
+        assertEquals(BaseCondition.EMPTY, outcome.baseConditionAfter)
+        assertEquals(listOf(runnerOnThird), outcome.scoringRunners)
     }
 
     @Test
@@ -654,6 +693,7 @@ class BaseRunningServiceTest {
         assertEquals(1, outcome.runsScored)
         assertEquals(1, outcome.awayScore)
         assertEquals(BaseCondition.EMPTY, outcome.baseConditionAfter)
+        assertEquals(listOf(runnerOnThird), outcome.scoringRunners)
     }
 
     @Test
@@ -809,6 +849,7 @@ class BaseRunningServiceTest {
         assertEquals(1, outcome.runsScored)
         assertEquals(3, outcome.homeScore)
         assertEquals(BaseCondition.EMPTY, outcome.baseConditionAfter)
+        assertEquals(listOf(runnerOnThird), outcome.scoringRunners)
     }
 
     @Test
@@ -881,6 +922,7 @@ class BaseRunningServiceTest {
         assertEquals(BaseCondition.SECOND, outcome.baseConditionAfter)
         assertEquals(runnerOnFirst, outcome.runnerOnSecondAfter)
         assertEquals(null, outcome.runnerOnThirdAfter)
+        assertEquals(listOf(runnerOnThird), outcome.scoringRunners)
     }
 
     @Test
@@ -903,6 +945,7 @@ class BaseRunningServiceTest {
         assertEquals(1, outcome.runsScored)
         assertEquals(BaseCondition.THIRD, outcome.baseConditionAfter)
         assertEquals(runnerOnSecond, outcome.runnerOnThirdAfter)
+        assertEquals(listOf(runnerOnThird), outcome.scoringRunners)
     }
 
     @Test

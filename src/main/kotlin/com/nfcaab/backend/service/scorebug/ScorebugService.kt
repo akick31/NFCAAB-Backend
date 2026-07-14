@@ -8,6 +8,7 @@ import com.nfcaab.backend.enums.team.Conference
 import com.nfcaab.backend.service.game.GameSpecificationService.GameCategory
 import com.nfcaab.backend.service.game.GameSpecificationService.GameFilter
 import com.nfcaab.backend.service.game.GameSpecificationService.GameSort
+import com.nfcaab.backend.service.stats.PlayerStatLineService
 import com.nfcaab.backend.util.Logger
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.data.domain.PageImpl
@@ -17,14 +18,20 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.stereotype.Service
-import java.awt.BasicStroke
 import java.awt.Color
 import java.awt.Font
+import java.awt.FontMetrics
 import java.awt.Graphics2D
+import java.awt.LinearGradientPaint
 import java.awt.RenderingHints
+import java.awt.geom.AffineTransform
+import java.awt.geom.Path2D
+import java.awt.geom.RoundRectangle2D
 import java.awt.image.BufferedImage
 import java.io.File
+import java.net.URL
 import java.util.Base64
+import java.util.concurrent.ConcurrentHashMap
 import javax.imageio.ImageIO
 import com.nfcaab.backend.service.team.TeamService
 import com.nfcaab.backend.service.game.GameSpecificationService
@@ -32,11 +39,51 @@ import com.nfcaab.backend.service.game.GameService
 
 @Service
 class ScorebugService(
-    private val teamService: com.nfcaab.backend.service.team.TeamService,
+    private val teamService: TeamService,
     private val gameService: GameService,
+    private val playerStatLineService: PlayerStatLineService,
 ) {
     @Value("\${images.path}")
     private val imagePath: String? = null
+
+    private val logoCache = ConcurrentHashMap<String, BufferedImage?>()
+
+    companion object {
+        private const val WIDTH = 600
+        private const val CORNER_RADIUS = 16.0
+        private const val TOP_PADDING_TOP = 28
+        private const val TOP_PADDING_SIDE = 28
+        private const val TOP_PADDING_BOTTOM = 16
+        private const val LOGO_SIZE = 76
+        private const val DIAMOND_SIZE = 84
+        private const val SCORE_DIAMOND_GAP = 24
+        private const val META_GAP_TOP = 12
+        private const val META_ROW_HEIGHT = 34
+        private const val PEOPLE_PADDING_TOP = 16
+        private const val PEOPLE_PADDING_SIDE = 28
+        private const val PEOPLE_PADDING_BOTTOM = 20
+        private const val PEOPLE_ROW_GAP = 16
+        private const val PERSON_ROW_HEIGHT = 30
+        private const val BAR_WIDTH = 6
+        private const val BAR_HEIGHT = 30
+        private const val BASE_SQUARE = 26
+
+        private val NEUTRAL_DARK = Color(10, 12, 15)
+        private val PEOPLE_PANEL = Color(18, 20, 23)
+        private val BASE_UNLIT_FILL = Color(35, 38, 43)
+        private val BASE_UNLIT_BORDER = Color(56, 61, 68)
+        private val FOUL_YELLOW = Color(244, 196, 48)
+        private val OUT_DOT_UNLIT = Color(58, 63, 70)
+        private val OUT_DOT_LIT = Color(230, 230, 223)
+        private val SCORE_WHITE = Color(242, 242, 240)
+        private val PITCHER_NAME_COLOR = Color(207, 211, 216)
+        private val BATTER_NAME_COLOR = Color(255, 255, 255)
+        private val PITCHER_STAT_COLOR = Color(154, 160, 168)
+        private val BATTER_STAT_COLOR = Color(216, 218, 221)
+
+        private val SANS_BOLD = Font("SansSerif", Font.BOLD, 1)
+        private val SANS_PLAIN = Font("SansSerif", Font.PLAIN, 1)
+    }
 
     /**
      * Get the scorebug for a game filtered
@@ -180,47 +227,31 @@ class ScorebugService(
     }
 
     /**
-     * Generates a baseball scorebug image for the game
-     * Based on the provided image description:
-     * - Top: Pitcher name, pitch count, batter name, batting stats
-     * - Middle: Team scores (left), bases (right - three diamonds)
-     * - Bottom: Inning (▼ 9 for bottom 9th), outs, count (2-2)
+     * Generates the locked NFCAAB scorebug design: a dark card with a team-color
+     * gradient header (logos, score, baserunner diamond, inning/outs) and a
+     * darker panel below showing the current pitcher and batter with a stat line.
      */
     fun generateScorebug(game: Game): BufferedImage {
         val homeTeam = teamService.getTeamByName(game.homeTeam)
         val awayTeam = teamService.getTeamByName(game.awayTeam)
 
-        // Baseball scorebug dimensions - wider for better layout
-        val width = 500
-        val height = 180
-        val image = BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB)
-        val g: Graphics2D = image.createGraphics()
+        val height = TOP_PADDING_TOP + DIAMOND_SIZE + META_GAP_TOP + META_ROW_HEIGHT + TOP_PADDING_BOTTOM +
+            PEOPLE_PADDING_TOP + PERSON_ROW_HEIGHT + PEOPLE_ROW_GAP + PERSON_ROW_HEIGHT + PEOPLE_PADDING_BOTTOM
 
-        // Enable anti-aliasing
+        val image = BufferedImage(WIDTH, height, BufferedImage.TYPE_INT_ARGB)
+        val g: Graphics2D = image.createGraphics()
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
         g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
 
-        // Dark background (like the image)
-        g.color = Color(20, 20, 20, 240) // Dark with slight transparency
-        g.fillRect(0, 0, width, height)
+        val cardShape = RoundRectangle2D.Double(0.0, 0.0, WIDTH.toDouble(), height.toDouble(), CORNER_RADIUS, CORNER_RADIUS)
+        g.clip = cardShape
 
-        // Draw border
-        g.color = Color.WHITE
-        g.stroke = BasicStroke(2f)
-        g.drawRect(0, 0, width - 1, height - 1)
-
-        // Top section: Pitcher and Batter info
-        drawTopSection(g, game, homeTeam, awayTeam, width, height)
-
-        // Middle section: Scores and Bases
-        drawMiddleSection(g, game, homeTeam, awayTeam, width, height)
-
-        // Bottom section: Inning, Outs, Count
-        drawBottomSection(g, game, width, height)
+        val topPanelHeight = TOP_PADDING_TOP + DIAMOND_SIZE + META_GAP_TOP + META_ROW_HEIGHT + TOP_PADDING_BOTTOM
+        drawTopPanel(g, game, homeTeam, awayTeam, topPanelHeight)
+        drawPeoplePanel(g, game, homeTeam, awayTeam, topPanelHeight, height - topPanelHeight)
 
         g.dispose()
 
-        // Save image to file
         val outputfile = File("$imagePath/scorebugs/${game.id}_scorebug.png")
         val directory = File("$imagePath/scorebugs")
         if (!directory.exists()) {
@@ -231,145 +262,276 @@ class ScorebugService(
         return image
     }
 
-    /**
-     * Draw top section: Pitcher name, pitch count, batter name, batting stats
-     */
-    private fun drawTopSection(
+    private fun drawTopPanel(
         g: Graphics2D,
         game: Game,
         homeTeam: Team,
         awayTeam: Team,
-        width: Int,
-        height: Int,
+        panelHeight: Int,
     ) {
-        val topY = 10
-        val lineHeight = 25
+        val awayDark = darken(Color.decode(awayTeam.primaryColor))
+        val homeDark = darken(Color.decode(homeTeam.primaryColor))
+        g.paint =
+            LinearGradientPaint(
+                0f,
+                0f,
+                WIDTH.toFloat(),
+                0f,
+                floatArrayOf(0f, 0.42f, 0.58f, 1f),
+                arrayOf(awayDark, NEUTRAL_DARK, NEUTRAL_DARK, homeDark),
+            )
+        g.fillRect(0, 0, WIDTH, panelHeight)
 
-        // Get pitch count from game (number of at-bats)
-        val pitchCount = game.numAtBat
+        val scoreRowCenterY = TOP_PADDING_TOP + DIAMOND_SIZE / 2
+        val diamondCenterX = WIDTH / 2
 
-        // Pitcher info (top left)
-        val pitcherName = game.pitcherName ?: "TBD"
-        val pitcherNumber = game.pitcherUniformNumber?.toString() ?: ""
-        g.color = Color.WHITE
-        g.font = Font("Arial", Font.BOLD, 18)
-        g.drawString(pitcherName, 10, topY + lineHeight)
+        drawTeamBlock(
+            g,
+            awayTeam,
+            game.awayScore,
+            logoX = TOP_PADDING_SIDE,
+            scoreRightEdge = diamondCenterX - DIAMOND_SIZE / 2 - SCORE_DIAMOND_GAP,
+            rowCenterY = scoreRowCenterY,
+            scoreAlignRight = true,
+        )
+        drawTeamBlock(
+            g,
+            homeTeam,
+            game.homeScore,
+            logoX = WIDTH - TOP_PADDING_SIDE - LOGO_SIZE,
+            scoreRightEdge = diamondCenterX + DIAMOND_SIZE / 2 + SCORE_DIAMOND_GAP,
+            rowCenterY = scoreRowCenterY,
+            scoreAlignRight = false,
+        )
 
-        // Pitch count (top right of pitcher section)
-        g.font = Font("Arial", Font.PLAIN, 16)
-        val pitchCountText = "P: $pitchCount"
-        val pitchCountWidth = g.fontMetrics.stringWidth(pitchCountText)
-        g.drawString(pitchCountText, 200 - pitchCountWidth, topY + lineHeight)
+        drawDiamond(g, diamondCenterX, scoreRowCenterY, game)
 
-        // Batter info (below pitcher)
-        val batterName = game.batterName ?: "TBD"
-        val batterNumber = game.batterUniformNumber?.toString() ?: ""
-        val batterLineupSpot = if (game.inningHalf == InningHalf.TOP) game.awayBatterLineupSpot else game.homeBatterLineupSpot
-        g.font = Font("Arial", Font.BOLD, 16)
-        g.drawString("$batterLineupSpot. $batterName", 10, topY + lineHeight * 2)
-
-        // Batter stats (0 FOR 1 format - simplified, would need actual stats)
-        g.font = Font("Arial", Font.PLAIN, 14)
-        val batterStats = "0 FOR 1" // TODO: Get actual batter stats
-        g.drawString(batterStats, 10, topY + lineHeight * 3)
+        val metaRowCenterY = TOP_PADDING_TOP + DIAMOND_SIZE + META_GAP_TOP + META_ROW_HEIGHT / 2
+        drawInningAndOuts(g, game, metaRowCenterY)
     }
 
-    /**
-     * Draw middle section: Team scores (left) and bases (right)
-     */
-    private fun drawMiddleSection(
+    private fun drawTeamBlock(
         g: Graphics2D,
-        game: Game,
-        homeTeam: Team,
-        awayTeam: Team,
-        width: Int,
-        height: Int,
+        team: Team,
+        score: Int,
+        logoX: Int,
+        scoreRightEdge: Int,
+        rowCenterY: Int,
+        scoreAlignRight: Boolean,
     ) {
-        val middleY = 80
-        val scoreBoxWidth = 80
-        val scoreBoxHeight = 50
-
-        // Away team score (top left)
-        g.color = Color.decode(homeTeam.primaryColor).darker()
-        g.fillRect(10, middleY, scoreBoxWidth, scoreBoxHeight / 2)
-        g.color = Color.WHITE
-        g.font = Font("Arial", Font.BOLD, 24)
-        val awayAbbr = awayTeam.abbreviation
-        val awayScore = game.awayScore.toString()
-        g.drawString(awayAbbr, 15, middleY + 20)
-        g.drawString(awayScore, 15, middleY + 40)
-
-        // Home team score (below away)
-        g.color = Color.decode(homeTeam.primaryColor).darker()
-        g.fillRect(10, middleY + scoreBoxHeight / 2, scoreBoxWidth, scoreBoxHeight / 2)
-        g.color = Color.WHITE
-        val homeAbbr = homeTeam.abbreviation
-        val homeScore = game.homeScore.toString()
-        g.drawString(homeAbbr, 15, middleY + 60)
-        g.drawString(homeScore, 15, middleY + 80)
-
-        // Bases (right side) - three diamond shapes
-        val basesX = width - 120
-        val basesY = middleY + 10
-        val diamondSize = 25
-        val spacing = 35
-
-        // Third base (top)
-        drawBaseDiamond(g, basesX, basesY, diamondSize, game.runnerOnThird != null)
-        // Second base (middle)
-        drawBaseDiamond(g, basesX + spacing, basesY + spacing, diamondSize, game.runnerOnSecond != null)
-        // First base (bottom)
-        drawBaseDiamond(g, basesX, basesY + spacing * 2, diamondSize, game.runnerOnFirst != null)
-    }
-
-    /**
-     * Draw a base diamond
-     */
-    private fun drawBaseDiamond(
-        g: Graphics2D,
-        x: Int,
-        y: Int,
-        size: Int,
-        hasRunner: Boolean,
-    ) {
-        val diamondX = intArrayOf(x, x + size / 2, x + size, x + size / 2)
-        val diamondY = intArrayOf(y + size / 2, y, y + size / 2, y + size)
-
-        if (hasRunner) {
-            g.color = Color(255, 200, 0) // Yellow/gold for runner
-            g.fillPolygon(diamondX, diamondY, 4)
+        val logo = loadLogo(team)
+        val logoY = rowCenterY - LOGO_SIZE / 2
+        if (logo != null) {
+            g.drawImage(logo, logoX, logoY, LOGO_SIZE, LOGO_SIZE, null)
         } else {
-            g.color = Color(100, 100, 100) // Gray for empty
-            g.fillPolygon(diamondX, diamondY, 4)
+            drawLogoFallback(g, team, logoX, logoY)
         }
 
-        g.color = Color.WHITE
-        g.stroke = BasicStroke(1.5f)
-        g.drawPolygon(diamondX, diamondY, 4)
+        g.font = SANS_BOLD.deriveFont(58f)
+        g.color = SCORE_WHITE
+        val scoreText = score.toString()
+        val metrics = g.fontMetrics
+        val baselineY = rowCenterY + (metrics.ascent - metrics.descent) / 2
+        val scoreX = if (scoreAlignRight) scoreRightEdge - metrics.stringWidth(scoreText) else scoreRightEdge
+        g.drawString(scoreText, scoreX, baselineY)
     }
 
-    /**
-     * Draw bottom section: Inning, Outs
-     */
-    private fun drawBottomSection(
+    private fun drawLogoFallback(
+        g: Graphics2D,
+        team: Team,
+        x: Int,
+        y: Int,
+    ) {
+        g.color = Color.decode(team.primaryColor)
+        g.fillOval(x, y, LOGO_SIZE, LOGO_SIZE)
+        g.font = SANS_BOLD.deriveFont(20f)
+        g.color = Color.WHITE
+        val metrics = g.fontMetrics
+        val initials = team.abbreviation.take(2).uppercase()
+        val textX = x + (LOGO_SIZE - metrics.stringWidth(initials)) / 2
+        val textY = y + LOGO_SIZE / 2 + (metrics.ascent - metrics.descent) / 2
+        g.drawString(initials, textX, textY)
+    }
+
+    private fun drawDiamond(
+        g: Graphics2D,
+        centerX: Int,
+        centerY: Int,
+        game: Game,
+    ) {
+        drawBase(g, centerX, centerY - DIAMOND_SIZE / 2, game.runnerOnSecond != null)
+        drawBase(g, centerX + DIAMOND_SIZE / 2, centerY, game.runnerOnFirst != null)
+        drawBase(g, centerX - DIAMOND_SIZE / 2, centerY, game.runnerOnThird != null)
+    }
+
+    private fun drawBase(
+        g: Graphics2D,
+        centerX: Int,
+        centerY: Int,
+        lit: Boolean,
+    ) {
+        val half = BASE_SQUARE / 2.0
+        val square = RoundRectangle2D.Double(-half, -half, BASE_SQUARE.toDouble(), BASE_SQUARE.toDouble(), 4.0, 4.0)
+        val transform = AffineTransform.getTranslateInstance(centerX.toDouble(), centerY.toDouble())
+        transform.rotate(Math.toRadians(45.0))
+        val rotated = transform.createTransformedShape(square)
+
+        g.color = if (lit) FOUL_YELLOW else BASE_UNLIT_FILL
+        g.fill(rotated)
+        if (!lit) {
+            g.color = BASE_UNLIT_BORDER
+            g.draw(rotated)
+        }
+    }
+
+    private fun drawInningAndOuts(
         g: Graphics2D,
         game: Game,
-        width: Int,
-        height: Int,
+        centerY: Int,
     ) {
-        val bottomY = height - 40
+        val inningText = "${game.inning}${ordinalSuffix(game.inning)}"
+        g.font = SANS_BOLD.deriveFont(22f)
+        val metrics = g.fontMetrics
+        val arrowWidth = 12
+        val arrowGap = 8
+        val outsGap = 24
+        val outsDotSize = 12
+        val outsDotGap = 6
 
-        // Inning (bottom left) - ▼ 9 for bottom of 9th
-        val inningSymbol = if (game.inningHalf == InningHalf.BOTTOM) "▼" else "▲"
-        val inningText = "$inningSymbol ${game.inning}"
-        g.color = Color.WHITE
-        g.font = Font("Arial", Font.BOLD, 18)
-        g.drawString(inningText, 10, bottomY)
+        val inningTextWidth = metrics.stringWidth(inningText)
+        val outsWidth = outsDotSize * 2 + outsDotGap
+        val totalWidth = arrowWidth + arrowGap + inningTextWidth + outsGap + outsWidth
+        var x = WIDTH / 2 - totalWidth / 2
 
-        // Outs (middle)
-        val outsText = "${game.outs} Out${if (game.outs != 1) "s" else ""}"
-        g.font = Font("Arial", Font.PLAIN, 16)
-        val outsWidth = g.fontMetrics.stringWidth(outsText)
-        g.drawString(outsText, (width - outsWidth) / 2, bottomY)
+        drawInningArrow(g, x, centerY, arrowWidth, game.inningHalf == InningHalf.TOP)
+        x += arrowWidth + arrowGap
+
+        g.color = SCORE_WHITE
+        val baselineY = centerY + (metrics.ascent - metrics.descent) / 2
+        g.drawString(inningText, x, baselineY)
+        x += inningTextWidth + outsGap
+
+        val litOuts = minOf(game.outs, 2)
+        for (i in 0 until 2) {
+            g.color = if (i < litOuts) OUT_DOT_LIT else OUT_DOT_UNLIT
+            g.fillOval(x, centerY - outsDotSize / 2, outsDotSize, outsDotSize)
+            x += outsDotSize + outsDotGap
+        }
+    }
+
+    private fun drawInningArrow(
+        g: Graphics2D,
+        x: Int,
+        centerY: Int,
+        size: Int,
+        pointingUp: Boolean,
+    ) {
+        val path = Path2D.Double()
+        if (pointingUp) {
+            path.moveTo(x.toDouble(), (centerY + size / 2).toDouble())
+            path.lineTo((x + size).toDouble(), (centerY + size / 2).toDouble())
+            path.lineTo((x + size / 2).toDouble(), (centerY - size / 2).toDouble())
+        } else {
+            path.moveTo(x.toDouble(), (centerY - size / 2).toDouble())
+            path.lineTo((x + size).toDouble(), (centerY - size / 2).toDouble())
+            path.lineTo((x + size / 2).toDouble(), (centerY + size / 2).toDouble())
+        }
+        path.closePath()
+        g.color = FOUL_YELLOW
+        g.fill(path)
+    }
+
+    private fun drawPeoplePanel(
+        g: Graphics2D,
+        game: Game,
+        homeTeam: Team,
+        awayTeam: Team,
+        panelTop: Int,
+        panelHeight: Int,
+    ) {
+        g.color = PEOPLE_PANEL
+        g.fillRect(0, panelTop, WIDTH, panelHeight)
+
+        val battingTeam = if (game.inningHalf == InningHalf.TOP) awayTeam else homeTeam
+        val pitchingTeam = if (game.inningHalf == InningHalf.TOP) homeTeam else awayTeam
+
+        val lineupSpot = if (game.inningHalf == InningHalf.TOP) game.awayBatterLineupSpot else game.homeBatterLineupSpot
+        val pitcherLabel = game.pitcherName ?: "TBD"
+        val batterLabel = game.batterName?.let { "$lineupSpot. $it" } ?: "TBD"
+
+        val pitcherStat = playerStatLineService.pitcherGameLine(pitchingTeam.name, game.pitcherUniformNumber, game.id)
+        val batterStat = playerStatLineService.batterGameLine(battingTeam.name, game.batterUniformNumber, game.id)
+
+        var rowCenterY = panelTop + PEOPLE_PADDING_TOP + PERSON_ROW_HEIGHT / 2
+        drawPersonRow(g, Color.decode(pitchingTeam.primaryColor), pitcherLabel, pitcherStat, PITCHER_NAME_COLOR, PITCHER_STAT_COLOR, rowCenterY)
+
+        rowCenterY += PERSON_ROW_HEIGHT / 2 + PEOPLE_ROW_GAP + PERSON_ROW_HEIGHT / 2
+        drawPersonRow(g, Color.decode(battingTeam.primaryColor), batterLabel, batterStat, BATTER_NAME_COLOR, BATTER_STAT_COLOR, rowCenterY)
+    }
+
+    private fun drawPersonRow(
+        g: Graphics2D,
+        barColor: Color,
+        name: String,
+        stat: String?,
+        nameColor: Color,
+        statColor: Color,
+        centerY: Int,
+    ) {
+        val barX = PEOPLE_PADDING_SIDE
+        g.color = barColor
+        g.fillRoundRect(barX, centerY - BAR_HEIGHT / 2, BAR_WIDTH, BAR_HEIGHT, 3, 3)
+
+        g.font = SANS_BOLD.deriveFont(20f)
+        g.color = nameColor
+        val nameMetrics: FontMetrics = g.fontMetrics
+        val nameX = barX + BAR_WIDTH + 12
+        val baselineY = centerY + (nameMetrics.ascent - nameMetrics.descent) / 2
+        g.drawString(name, nameX, baselineY)
+
+        if (stat != null) {
+            g.font = SANS_PLAIN.deriveFont(16f)
+            g.color = statColor
+            val statMetrics = g.fontMetrics
+            val statX = WIDTH - PEOPLE_PADDING_SIDE - statMetrics.stringWidth(stat)
+            val statBaselineY = centerY + (statMetrics.ascent - statMetrics.descent) / 2
+            g.drawString(stat, statX, statBaselineY)
+        }
+    }
+
+    private fun loadLogo(team: Team): BufferedImage? {
+        val path = team.scorebugLogo ?: team.logo ?: return null
+        return logoCache.getOrPut(path) {
+            try {
+                if (path.startsWith("http://") || path.startsWith("https://")) {
+                    ImageIO.read(URL(path))
+                } else {
+                    ImageIO.read(File(path))
+                }
+            } catch (e: Exception) {
+                Logger.warn("Failed to load logo for team ${team.name} from $path: ${e.message}")
+                null
+            }
+        }
+    }
+
+    private fun darken(color: Color): Color {
+        val factor = 0.32
+        return Color(
+            (color.red * factor).toInt().coerceIn(0, 255),
+            (color.green * factor).toInt().coerceIn(0, 255),
+            (color.blue * factor).toInt().coerceIn(0, 255),
+        )
+    }
+
+    private fun ordinalSuffix(n: Int): String {
+        val remainder100 = n % 100
+        if (remainder100 in 11..13) return "th"
+        return when (n % 10) {
+            1 -> "st"
+            2 -> "nd"
+            3 -> "rd"
+            else -> "th"
+        }
     }
 }

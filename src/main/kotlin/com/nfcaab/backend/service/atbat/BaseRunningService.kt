@@ -62,7 +62,7 @@ class BaseRunningService(
             TRIPLE ->
                 handleTriple(outs, inningHalf, baseConditionBefore, runnerOnFirst, runnerOnSecond, runnerOnThird, homeScore, awayScore, batter)
             HOME_RUN ->
-                handleHomeRun(outs, inningHalf, baseConditionBefore, runnerOnFirst, runnerOnSecond, runnerOnThird, homeScore, awayScore)
+                handleHomeRun(outs, inningHalf, baseConditionBefore, runnerOnFirst, runnerOnSecond, runnerOnThird, homeScore, awayScore, batter)
             else -> throw InvalidScenarioException()
         }
 
@@ -100,10 +100,12 @@ class BaseRunningService(
         var runnerOnFirstAfter = runnerOnFirst
         var runnerOnSecondAfter = runnerOnSecond
         var runnerOnThirdAfter = runnerOnThird
+        val scoringRunners = mutableListOf<Player>()
 
-        fun scoreRun() {
+        fun scoreRun(scorer: Player) {
             runsScored += 1
             if (inningHalf == TOP) updatedAwayScore += 1 else updatedHomeScore += 1
+            scoringRunners.add(scorer)
         }
 
         when {
@@ -117,16 +119,16 @@ class BaseRunningService(
                 runnerOnFirstAfter = null
                 runnerOnSecondAfter = runnerOnFirst
                 runnerOnThirdAfter = null
-                if (success) scoreRun() else updatedOuts = outs + 1
+                if (success) scoreRun(runnerOnThird) else updatedOuts = outs + 1
             }
             runnerOnSecond != null && runnerOnThird != null && runnerOnFirst == null -> {
                 runnerOnSecondAfter = null
                 runnerOnThirdAfter = runnerOnSecond
-                if (success) scoreRun() else updatedOuts = outs + 1
+                if (success) scoreRun(runnerOnThird) else updatedOuts = outs + 1
             }
             runnerOnThird != null -> {
                 runnerOnThirdAfter = null
-                if (success) scoreRun() else updatedOuts = outs + 1
+                if (success) scoreRun(runnerOnThird) else updatedOuts = outs + 1
             }
             runnerOnSecond != null -> {
                 runnerOnSecondAfter = null
@@ -169,6 +171,7 @@ class BaseRunningService(
             runnerOnSecondAfter = runnerOnSecondAfter,
             runnerOnThirdAfter = runnerOnThirdAfter,
             baseConditionAfter = baseConditionAfter,
+            scoringRunners = scoringRunners,
         )
     }
 
@@ -218,6 +221,7 @@ class BaseRunningService(
             var updatedHomeScore = homeScore
             var updatedAwayScore = awayScore
             var runsScored = 0
+            var scoringRunners: List<Player> = emptyList()
             val runnerOnFirstAfter: Player?
             val runnerOnSecondAfter: Player?
             val runnerOnThirdAfter: Player?
@@ -241,6 +245,7 @@ class BaseRunningService(
                     runnerOnThirdAfter = null
                     baseConditionAfter = BaseCondition.EMPTY
                     runsScored = 1
+                    scoringRunners = listOfNotNull(runnerOnThird)
                     if (inningHalf == TOP) updatedAwayScore += 1 else updatedHomeScore += 1
                 }
                 BaseCondition.FIRST_SECOND -> {
@@ -255,6 +260,7 @@ class BaseRunningService(
                     runnerOnThirdAfter = null
                     baseConditionAfter = BaseCondition.SECOND
                     runsScored = 1
+                    scoringRunners = listOfNotNull(runnerOnThird)
                     if (inningHalf == TOP) updatedAwayScore += 1 else updatedHomeScore += 1
                 }
                 BaseCondition.SECOND_THIRD -> {
@@ -263,6 +269,7 @@ class BaseRunningService(
                     runnerOnThirdAfter = runnerOnSecond
                     baseConditionAfter = BaseCondition.THIRD
                     runsScored = 1
+                    scoringRunners = listOfNotNull(runnerOnThird)
                     if (inningHalf == TOP) updatedAwayScore += 1 else updatedHomeScore += 1
                 }
                 BaseCondition.BASED_LOADED -> {
@@ -271,6 +278,7 @@ class BaseRunningService(
                     runnerOnThirdAfter = runnerOnSecond
                     baseConditionAfter = BaseCondition.SECOND_THIRD
                     runsScored = 1
+                    scoringRunners = listOfNotNull(runnerOnThird)
                     if (inningHalf == TOP) updatedAwayScore += 1 else updatedHomeScore += 1
                 }
                 else -> throw InvalidScenarioException()
@@ -285,6 +293,7 @@ class BaseRunningService(
                 runnerOnSecondAfter = runnerOnSecondAfter,
                 runnerOnThirdAfter = runnerOnThirdAfter,
                 baseConditionAfter = baseConditionAfter,
+                scoringRunners = scoringRunners,
             )
         }
 
@@ -368,6 +377,7 @@ class BaseRunningService(
         var runsScored = 0
         var updatedHomeScore = homeScore
         var updatedAwayScore = awayScore
+        var scoringRunners: List<Player> = emptyList()
 
         val runnerOnFirstAfter: Player?
         val runnerOnSecondAfter: Player?
@@ -399,6 +409,7 @@ class BaseRunningService(
                     runnerOnThirdAfter = runnerOnSecond
                     baseConditionAfter = if (turnsTwo) BaseCondition.THIRD else BaseCondition.FIRST_THIRD
                     runsScored = 1
+                    scoringRunners = listOfNotNull(runnerOnThird)
                     if (inningHalf == TOP) updatedAwayScore += 1 else updatedHomeScore += 1
                 }
                 else -> throw InvalidScenarioException()
@@ -415,6 +426,7 @@ class BaseRunningService(
             runnerOnSecondAfter = runnerOnSecondAfter,
             runnerOnThirdAfter = runnerOnThirdAfter,
             baseConditionAfter = baseConditionAfter,
+            scoringRunners = scoringRunners,
         )
     }
 
@@ -476,6 +488,7 @@ class BaseRunningService(
         var runnerOnSecondAfter = runnerOnSecond
         var runnerOnThirdAfter = runnerOnThird
         var baseConditionAfter = baseConditionBefore
+        var scoringRunners: List<Player> = emptyList()
         if (updatedOuts < 3) {
             when (baseConditionBefore) {
                 BaseCondition.FIRST -> {
@@ -495,6 +508,7 @@ class BaseRunningService(
                     runnerOnThirdAfter = null
                     baseConditionAfter = BaseCondition.EMPTY
                     runsScored = 1
+                    scoringRunners = listOfNotNull(runnerOnThird)
                     if (inningHalf == TOP) {
                         updatedAwayScore += 1
                     } else {
@@ -519,6 +533,7 @@ class BaseRunningService(
                     runnerOnThirdAfter = null
                     baseConditionAfter = BaseCondition.FIRST
                     runsScored = 1
+                    scoringRunners = listOfNotNull(runnerOnThird)
                     if (inningHalf == TOP) {
                         updatedAwayScore += 1
                     } else {
@@ -537,6 +552,7 @@ class BaseRunningService(
                         baseConditionAfter = BaseCondition.SECOND
                     }
                     runsScored = 1
+                    scoringRunners = listOfNotNull(runnerOnThird)
                     if (inningHalf == TOP) {
                         updatedAwayScore += 1
                     } else {
@@ -557,6 +573,7 @@ class BaseRunningService(
                         baseConditionAfter = BaseCondition.FIRST_SECOND
                     }
                     runsScored = 1
+                    scoringRunners = listOfNotNull(runnerOnThird)
                     if (inningHalf == TOP) {
                         updatedAwayScore += 1
                     } else {
@@ -581,6 +598,7 @@ class BaseRunningService(
             runnerOnSecondAfter = runnerOnSecondAfter,
             runnerOnThirdAfter = runnerOnThirdAfter,
             baseConditionAfter = baseConditionAfter,
+            scoringRunners = scoringRunners,
         )
     }
 
@@ -651,6 +669,7 @@ class BaseRunningService(
                     runnerOnSecondAfter = runnerOnFirst,
                     runnerOnThirdAfter = null,
                     baseConditionAfter = BaseCondition.FIRST_SECOND,
+                    scoringRunners = listOfNotNull(runnerOnThird),
                 )
             }
             BaseCondition.SECOND_THIRD -> {
@@ -677,6 +696,7 @@ class BaseRunningService(
                     runnerOnSecondAfter = runnerOnFirst,
                     runnerOnThirdAfter = runnerOnSecond,
                     baseConditionAfter = BaseCondition.BASED_LOADED,
+                    scoringRunners = listOfNotNull(runnerOnThird),
                 )
             }
         }
@@ -763,6 +783,7 @@ class BaseRunningService(
         var runsScored = 0
         var updatedHomeScore = homeScore
         var updatedAwayScore = awayScore
+        var scoringRunners: List<Player> = emptyList()
         val runnerOnFirstAfter: Player?
         val runnerOnSecondAfter: Player?
         val runnerOnThirdAfter: Player?
@@ -787,6 +808,7 @@ class BaseRunningService(
                     runnerOnThirdAfter = null
                     baseConditionAfter = BaseCondition.EMPTY
                     runsScored = 1
+                    scoringRunners = listOfNotNull(runnerOnThird)
                     if (inningHalf == TOP) {
                         updatedAwayScore += 1
                     } else {
@@ -811,6 +833,7 @@ class BaseRunningService(
             runnerOnSecondAfter = runnerOnSecondAfter,
             runnerOnThirdAfter = runnerOnThirdAfter,
             baseConditionAfter = baseConditionAfter,
+            scoringRunners = scoringRunners,
         )
     }
 
@@ -830,6 +853,7 @@ class BaseRunningService(
         var runsScored = 0
         var updatedHomeScore = homeScore
         var updatedAwayScore = awayScore
+        var scoringRunners: List<Player> = emptyList()
         val runnerOnFirstAfter: Player?
         val runnerOnSecondAfter: Player?
         val runnerOnThirdAfter: Player?
@@ -855,6 +879,7 @@ class BaseRunningService(
                     runnerOnThirdAfter = null
                     baseConditionAfter = BaseCondition.FIRST
                     runsScored = 1
+                    scoringRunners = listOfNotNull(runnerOnSecond)
                     if (inningHalf == TOP) updatedAwayScore += 1 else updatedHomeScore += 1
                 } else {
                     runnerOnSecondAfter = null
@@ -868,6 +893,7 @@ class BaseRunningService(
                 runnerOnThirdAfter = null
                 baseConditionAfter = BaseCondition.FIRST
                 runsScored = 1
+                scoringRunners = listOfNotNull(runnerOnThird)
                 if (inningHalf == TOP) {
                     updatedAwayScore += 1
                 } else {
@@ -881,6 +907,7 @@ class BaseRunningService(
                     runnerOnThirdAfter = null
                     baseConditionAfter = BaseCondition.FIRST_SECOND
                     runsScored = 1
+                    scoringRunners = listOfNotNull(runnerOnSecond)
                     if (inningHalf == TOP) updatedAwayScore += 1 else updatedHomeScore += 1
                 } else {
                     runnerOnSecondAfter = runnerOnFirst
@@ -894,6 +921,7 @@ class BaseRunningService(
                 runnerOnThirdAfter = null
                 baseConditionAfter = BaseCondition.FIRST_SECOND
                 runsScored = 1
+                scoringRunners = listOfNotNull(runnerOnThird)
                 if (inningHalf == TOP) {
                     updatedAwayScore += 1
                 } else {
@@ -904,6 +932,7 @@ class BaseRunningService(
                 runnerOnFirstAfter = batter
                 val extra = runnerTakesExtraBase(direction, runnerOnSecond, outs)
                 runsScored = if (extra) 2 else 1
+                scoringRunners = if (extra) listOfNotNull(runnerOnThird, runnerOnSecond) else listOfNotNull(runnerOnThird)
                 if (inningHalf == TOP) updatedAwayScore += runsScored else updatedHomeScore += runsScored
                 if (extra) {
                     runnerOnSecondAfter = null
@@ -919,6 +948,7 @@ class BaseRunningService(
                 runnerOnFirstAfter = batter
                 val extra = runnerTakesExtraBase(direction, runnerOnSecond, outs)
                 runsScored = if (extra) 2 else 1
+                scoringRunners = if (extra) listOfNotNull(runnerOnThird, runnerOnSecond) else listOfNotNull(runnerOnThird)
                 if (inningHalf == TOP) updatedAwayScore += runsScored else updatedHomeScore += runsScored
                 if (extra) {
                     runnerOnSecondAfter = runnerOnFirst
@@ -942,6 +972,7 @@ class BaseRunningService(
             runnerOnSecondAfter = runnerOnSecondAfter,
             runnerOnThirdAfter = runnerOnThirdAfter,
             baseConditionAfter = baseConditionAfter,
+            scoringRunners = scoringRunners,
         )
     }
 
@@ -961,6 +992,7 @@ class BaseRunningService(
         var runsScored = 0
         var updatedHomeScore = homeScore
         var updatedAwayScore = awayScore
+        var scoringRunners: List<Player> = emptyList()
         val runnerOnFirstAfter: Player?
         val runnerOnSecondAfter: Player?
         val runnerOnThirdAfter: Player?
@@ -980,6 +1012,7 @@ class BaseRunningService(
                     runnerOnThirdAfter = null
                     baseConditionAfter = BaseCondition.SECOND
                     runsScored = 1
+                    scoringRunners = listOfNotNull(runnerOnFirst)
                     if (inningHalf == TOP) updatedAwayScore += 1 else updatedHomeScore += 1
                 } else {
                     runnerOnThirdAfter = runnerOnFirst
@@ -992,6 +1025,7 @@ class BaseRunningService(
                 runnerOnThirdAfter = null
                 baseConditionAfter = BaseCondition.SECOND
                 runsScored = 1
+                scoringRunners = listOfNotNull(runnerOnSecond)
                 if (inningHalf == TOP) {
                     updatedAwayScore += 1
                 } else {
@@ -1004,6 +1038,7 @@ class BaseRunningService(
                 runnerOnThirdAfter = null
                 baseConditionAfter = BaseCondition.SECOND
                 runsScored = 1
+                scoringRunners = listOfNotNull(runnerOnThird)
                 if (inningHalf == TOP) {
                     updatedAwayScore += 1
                 } else {
@@ -1019,10 +1054,12 @@ class BaseRunningService(
                     runnerOnThirdAfter = null
                     baseConditionAfter = BaseCondition.SECOND
                     runsScored = 2
+                    scoringRunners = listOfNotNull(runnerOnSecond, runnerOnFirst)
                     if (inningHalf == TOP) updatedAwayScore += 1 else updatedHomeScore += 1
                 } else {
                     runnerOnThirdAfter = runnerOnFirst
                     baseConditionAfter = BaseCondition.SECOND_THIRD
+                    scoringRunners = listOfNotNull(runnerOnSecond)
                 }
             }
             BaseCondition.FIRST_THIRD -> {
@@ -1034,10 +1071,12 @@ class BaseRunningService(
                     runnerOnThirdAfter = null
                     baseConditionAfter = BaseCondition.SECOND
                     runsScored = 2
+                    scoringRunners = listOfNotNull(runnerOnThird, runnerOnFirst)
                     if (inningHalf == TOP) updatedAwayScore += 1 else updatedHomeScore += 1
                 } else {
                     runnerOnThirdAfter = runnerOnFirst
                     baseConditionAfter = BaseCondition.SECOND_THIRD
+                    scoringRunners = listOfNotNull(runnerOnThird)
                 }
             }
             BaseCondition.SECOND_THIRD -> {
@@ -1046,6 +1085,7 @@ class BaseRunningService(
                 runnerOnThirdAfter = null
                 baseConditionAfter = BaseCondition.SECOND
                 runsScored = 2
+                scoringRunners = listOfNotNull(runnerOnSecond, runnerOnThird)
                 if (inningHalf == TOP) {
                     updatedAwayScore += 2
                 } else {
@@ -1061,10 +1101,12 @@ class BaseRunningService(
                     runnerOnThirdAfter = null
                     baseConditionAfter = BaseCondition.SECOND
                     runsScored = 3
+                    scoringRunners = listOfNotNull(runnerOnSecond, runnerOnThird, runnerOnFirst)
                     if (inningHalf == TOP) updatedAwayScore += 1 else updatedHomeScore += 1
                 } else {
                     runnerOnThirdAfter = runnerOnFirst
                     baseConditionAfter = BaseCondition.SECOND_THIRD
+                    scoringRunners = listOfNotNull(runnerOnSecond, runnerOnThird)
                 }
             }
         }
@@ -1079,6 +1121,7 @@ class BaseRunningService(
             runnerOnSecondAfter = runnerOnSecondAfter,
             runnerOnThirdAfter = runnerOnThirdAfter,
             baseConditionAfter = baseConditionAfter,
+            scoringRunners = scoringRunners,
         )
     }
 
@@ -1125,6 +1168,7 @@ class BaseRunningService(
             runnerOnSecondAfter = null,
             runnerOnThirdAfter = batter,
             baseConditionAfter = BaseCondition.THIRD,
+            scoringRunners = listOfNotNull(runnerOnFirst, runnerOnSecond, runnerOnThird),
         )
     }
 
@@ -1137,6 +1181,7 @@ class BaseRunningService(
         runnerOnThird: Player?,
         homeScore: Int,
         awayScore: Int,
+        batter: Player,
     ): AtBatOutcome {
         val actualResult = ActualResult.HOME_RUN
         val runsScored =
@@ -1169,6 +1214,7 @@ class BaseRunningService(
             runnerOnSecondAfter = null,
             runnerOnThirdAfter = null,
             baseConditionAfter = BaseCondition.EMPTY,
+            scoringRunners = listOfNotNull(runnerOnFirst, runnerOnSecond, runnerOnThird, batter),
         )
     }
 }

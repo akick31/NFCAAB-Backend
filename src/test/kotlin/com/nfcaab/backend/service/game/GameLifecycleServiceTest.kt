@@ -23,6 +23,7 @@ import com.nfcaab.backend.service.lineup.LineupService
 import com.nfcaab.backend.service.schedule.ScheduleService
 import com.nfcaab.backend.service.schedule.SeasonService
 import com.nfcaab.backend.service.stats.GameStatsService
+import com.nfcaab.backend.service.stats.PitcherDecisionService
 import com.nfcaab.backend.service.team.TeamService
 import com.nfcaab.backend.service.user.UserService
 import com.nfcaab.backend.util.TeamNotFoundException
@@ -43,6 +44,7 @@ class GameLifecycleServiceTest {
     private lateinit var discordService: DiscordService
     private lateinit var userService: UserService
     private lateinit var gameStatsService: GameStatsService
+    private lateinit var pitcherDecisionService: PitcherDecisionService
     private lateinit var seasonService: SeasonService
     private lateinit var scheduleService: ScheduleService
     private lateinit var lineupService: LineupService
@@ -57,6 +59,7 @@ class GameLifecycleServiceTest {
         discordService = mockk()
         userService = mockk()
         gameStatsService = mockk()
+        pitcherDecisionService = mockk()
         seasonService = mockk()
         scheduleService = mockk()
         lineupService = mockk()
@@ -69,6 +72,7 @@ class GameLifecycleServiceTest {
                 discordService,
                 userService,
                 gameStatsService,
+                pitcherDecisionService,
                 seasonService,
                 scheduleService,
                 lineupService,
@@ -219,6 +223,7 @@ class GameLifecycleServiceTest {
         every { gameStatsService.updateGameStats(any(), any()) } returns emptyList()
         every { gameStatsService.getGameStatsByIdAndTeam(any(), any()) } returns mockk(relaxed = true)
         every { gameStatsService.saveGameStats(any()) } returns mockk()
+        every { pitcherDecisionService.computeDecisions(any()) } returns Unit
 
         val result = gameLifecycleService.updateGameValues(game, outcome)
 
@@ -256,6 +261,7 @@ class GameLifecycleServiceTest {
         every { gameStatsService.updateGameStats(any(), any()) } returns emptyList()
         every { gameStatsService.getGameStatsByIdAndTeam(any(), any()) } returns mockk(relaxed = true)
         every { gameStatsService.saveGameStats(any()) } returns mockk()
+        every { pitcherDecisionService.computeDecisions(any()) } returns Unit
 
         val result = gameLifecycleService.updateGameValues(game, outcome)
 
@@ -378,6 +384,7 @@ class GameLifecycleServiceTest {
         every { gameStatsService.updateGameStats(any(), any()) } returns emptyList()
         every { gameStatsService.getGameStatsByIdAndTeam(any(), any()) } returns mockk(relaxed = true)
         every { gameStatsService.saveGameStats(any()) } returns mockk()
+        every { pitcherDecisionService.computeDecisions(any()) } returns Unit
 
         val result = gameLifecycleService.endDOGOutGame(game, Pair(3, 0))
 
@@ -408,6 +415,7 @@ class GameLifecycleServiceTest {
         every { gameStatsService.getGameStatsByIdAndTeam(any(), any()) } returns mockk(relaxed = true)
         every { gameStatsService.saveGameStats(any()) } returns mockk()
         every { gameStatsService.aggregateStatsAfterGame(game) } returns Unit
+        every { pitcherDecisionService.computeDecisions(any()) } returns Unit
 
         val result = gameLifecycleService.endSingleGame(1UL)
 
@@ -428,6 +436,7 @@ class GameLifecycleServiceTest {
         every { gameStatsService.updateGameStats(game, any()) } returns emptyList()
         every { gameStatsService.getGameStatsByIdAndTeam(any(), any()) } returns mockk(relaxed = true)
         every { gameStatsService.saveGameStats(any()) } returns mockk()
+        every { pitcherDecisionService.computeDecisions(any()) } returns Unit
 
         val result = gameLifecycleService.endAllGames()
 

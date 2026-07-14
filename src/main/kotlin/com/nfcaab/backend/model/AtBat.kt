@@ -85,6 +85,15 @@ class AtBat {
     @Column(name = "runner_on_third")
     var runnerOnThird: Int? = null
 
+    @Column(name = "runner_on_first_pitcher")
+    var runnerOnFirstPitcher: Int? = null
+
+    @Column(name = "runner_on_second_pitcher")
+    var runnerOnSecondPitcher: Int? = null
+
+    @Column(name = "runner_on_third_pitcher")
+    var runnerOnThirdPitcher: Int? = null
+
     @Column(name = "runs_scored")
     var runsScored: Int = 0
 
@@ -96,6 +105,15 @@ class AtBat {
 
     @Column(name = "runner_on_third_after")
     var runnerOnThirdAfter: Int? = null
+
+    @Column(name = "runner_on_first_pitcher_after")
+    var runnerOnFirstPitcherAfter: Int? = null
+
+    @Column(name = "runner_on_second_pitcher_after")
+    var runnerOnSecondPitcherAfter: Int? = null
+
+    @Column(name = "runner_on_third_pitcher_after")
+    var runnerOnThirdPitcherAfter: Int? = null
 
     @Column(name = "lineup_spot")
     var lineupSpot: Int = 1

@@ -6,12 +6,15 @@ import com.nfcaab.backend.model.AtBat.SubmissionType
 import com.nfcaab.backend.model.Game
 import com.nfcaab.backend.model.Game.Scenario
 import com.nfcaab.backend.model.Player
+import com.nfcaab.backend.model.RunEvent
 import com.nfcaab.backend.repositories.AtBatRepository
+import com.nfcaab.backend.repositories.RunEventRepository
 import com.nfcaab.backend.service.game.GameService
 import com.nfcaab.backend.service.game.GameLifecycleService
 import com.nfcaab.backend.service.player.PlayerService
 import com.nfcaab.backend.service.scorebug.ScorebugService
 import com.nfcaab.backend.service.stats.GameStatsService
+import com.nfcaab.backend.service.stats.PlayerGameStatsService
 import com.nfcaab.backend.util.EncryptionUtils
 import com.nfcaab.backend.util.ResultNotFoundException
 import org.springframework.stereotype.Service
@@ -19,10 +22,12 @@ import org.springframework.stereotype.Service
 @Service
 class AtBatResolutionService(
     private val atBatRepository: AtBatRepository,
+    private val runEventRepository: RunEventRepository,
     private val encryptionUtils: EncryptionUtils,
     private val gameService: GameService,
     private val gameLifecycleService: GameLifecycleService,
     private val gameStatsService: GameStatsService,
+    private val playerGameStatsService: PlayerGameStatsService,
     private val rangesService: RangesService,
     private val scorebugService: ScorebugService,
     private val playerService: PlayerService,
@@ -85,17 +90,45 @@ class AtBatResolutionService(
                 submissionType,
             )
 
-        gameLifecycleService.updateGameValues(game, outcome)
-        scorebugService.generateScorebug(game)
+        val enrichedOutcome =
+            enrichOutcomeWithResponsiblePitchers(
+                outcome,
+                runnerOnFirst,
+                game.runnerOnFirstPitcher,
+                runnerOnSecond,
+                game.runnerOnSecondPitcher,
+                runnerOnThird,
+                game.runnerOnThirdPitcher,
+                pitcher.uniformNumber,
+            )
+
+        gameLifecycleService.updateGameValues(game, enrichedOutcome)
+
+        recordRunEvents(
+            game,
+            atBat,
+            enrichedOutcome.scoringRunners,
+            atBat.battingTeam ?: "",
+            atBat.pitchingTeam ?: "",
+            runnerOnFirst,
+            game.runnerOnFirstPitcher,
+            runnerOnSecond,
+            game.runnerOnSecondPitcher,
+            runnerOnThird,
+            game.runnerOnThirdPitcher,
+            pitcher.uniformNumber,
+        )
 
         val allAtBats = atBatRepository.getAllAtBatsByGameId(game.id)
         gameStatsService.updateGameStats(game, allAtBats)
+        playerGameStatsService.updatePlayerGameStats(game, allAtBats)
+        scorebugService.generateScorebug(game)
 
         val resolvedHitLocation =
             hitLocation.copy(
                 fieldingNotation =
                     hitLocationService.buildFieldingNotation(
-                        outcome.actualResult,
+                        enrichedOutcome.actualResult,
                         hitLocation.fielderPosition,
                         hitLocation.battedBallType,
                     ),
@@ -105,11 +138,17 @@ class AtBatResolutionService(
             atBat,
             submissionType,
             result,
-            outcome,
+            enrichedOutcome,
             decryptedPitcherNumber.toInt(),
             batterNumberSubmission,
             difference,
             resolvedHitLocation,
+            runnerOnFirst,
+            game.runnerOnFirstPitcher,
+            runnerOnSecond,
+            game.runnerOnSecondPitcher,
+            runnerOnThird,
+            game.runnerOnThirdPitcher,
         )
     }
 
@@ -149,21 +188,55 @@ class AtBatResolutionService(
                 game.awayScore,
             )
 
-        gameLifecycleService.updateGameValues(game, outcome, false)
-        scorebugService.generateScorebug(game)
+        val enrichedOutcome =
+            enrichOutcomeWithResponsiblePitchers(
+                outcome,
+                runnerOnFirst,
+                game.runnerOnFirstPitcher,
+                runnerOnSecond,
+                game.runnerOnSecondPitcher,
+                runnerOnThird,
+                game.runnerOnThirdPitcher,
+                pitcher.uniformNumber,
+            )
+
+        gameLifecycleService.updateGameValues(game, enrichedOutcome, false)
+
+        recordRunEvents(
+            game,
+            atBat,
+            enrichedOutcome.scoringRunners,
+            atBat.battingTeam ?: "",
+            atBat.pitchingTeam ?: "",
+            runnerOnFirst,
+            game.runnerOnFirstPitcher,
+            runnerOnSecond,
+            game.runnerOnSecondPitcher,
+            runnerOnThird,
+            game.runnerOnThirdPitcher,
+            pitcher.uniformNumber,
+        )
 
         val allAtBats = atBatRepository.getAllAtBatsByGameId(game.id)
         gameStatsService.updateGameStats(game, allAtBats)
+        playerGameStatsService.updatePlayerGameStats(game, allAtBats)
+        scorebugService.generateScorebug(game)
 
         return updateAtBatValues(
             atBat,
             submissionType,
             result,
-            outcome,
+            enrichedOutcome,
             decryptedPitcherNumber.toInt(),
             batterNumberSubmission,
             difference,
             HitLocation(null, null, null),
+            runnerOnFirst,
+            game.runnerOnFirstPitcher,
+            runnerOnSecond,
+            game.runnerOnSecondPitcher,
+            runnerOnThird,
+            game.runnerOnThirdPitcher,
         )
     }
 
@@ -200,22 +273,162 @@ class AtBatResolutionService(
                 batter,
             )
 
-        gameLifecycleService.updateGameValues(game, outcome)
-        scorebugService.generateScorebug(game)
+        val currentPitcherUniformNumber = decryptedPitcherNumber.toIntOrNull()
+        val enrichedOutcome =
+            enrichOutcomeWithResponsiblePitchers(
+                outcome,
+                runnerOnFirst,
+                game.runnerOnFirstPitcher,
+                runnerOnSecond,
+                game.runnerOnSecondPitcher,
+                runnerOnThird,
+                game.runnerOnThirdPitcher,
+                currentPitcherUniformNumber,
+            )
+
+        gameLifecycleService.updateGameValues(game, enrichedOutcome)
+
+        recordRunEvents(
+            game,
+            atBat,
+            enrichedOutcome.scoringRunners,
+            atBat.battingTeam ?: "",
+            atBat.pitchingTeam ?: "",
+            runnerOnFirst,
+            game.runnerOnFirstPitcher,
+            runnerOnSecond,
+            game.runnerOnSecondPitcher,
+            runnerOnThird,
+            game.runnerOnThirdPitcher,
+            currentPitcherUniformNumber,
+        )
 
         val allAtBats = atBatRepository.getAllAtBatsByGameId(game.id)
         gameStatsService.updateGameStats(game, allAtBats)
+        playerGameStatsService.updatePlayerGameStats(game, allAtBats)
+        scorebugService.generateScorebug(game)
 
         return updateAtBatValues(
             atBat,
             submissionType,
             Scenario.WALK,
-            outcome,
+            enrichedOutcome,
             decryptedPitcherNumber.toInt(),
             batterNumberSubmission,
             difference,
             HitLocation(null, null, null),
+            runnerOnFirst,
+            game.runnerOnFirstPitcher,
+            runnerOnSecond,
+            game.runnerOnSecondPitcher,
+            runnerOnThird,
+            game.runnerOnThirdPitcher,
         )
+    }
+
+    private fun enrichOutcomeWithResponsiblePitchers(
+        outcome: AtBatOutcome,
+        runnerOnFirst: Player?,
+        runnerOnFirstPitcher: Int?,
+        runnerOnSecond: Player?,
+        runnerOnSecondPitcher: Int?,
+        runnerOnThird: Player?,
+        runnerOnThirdPitcher: Int?,
+        currentPitcherUniformNumber: Int?,
+    ): AtBatOutcome =
+        outcome.copy(
+            runnerOnFirstPitcherAfter =
+                resolveResponsiblePitcher(
+                    outcome.runnerOnFirstAfter,
+                    runnerOnFirst,
+                    runnerOnFirstPitcher,
+                    runnerOnSecond,
+                    runnerOnSecondPitcher,
+                    runnerOnThird,
+                    runnerOnThirdPitcher,
+                    currentPitcherUniformNumber,
+                ),
+            runnerOnSecondPitcherAfter =
+                resolveResponsiblePitcher(
+                    outcome.runnerOnSecondAfter,
+                    runnerOnFirst,
+                    runnerOnFirstPitcher,
+                    runnerOnSecond,
+                    runnerOnSecondPitcher,
+                    runnerOnThird,
+                    runnerOnThirdPitcher,
+                    currentPitcherUniformNumber,
+                ),
+            runnerOnThirdPitcherAfter =
+                resolveResponsiblePitcher(
+                    outcome.runnerOnThirdAfter,
+                    runnerOnFirst,
+                    runnerOnFirstPitcher,
+                    runnerOnSecond,
+                    runnerOnSecondPitcher,
+                    runnerOnThird,
+                    runnerOnThirdPitcher,
+                    currentPitcherUniformNumber,
+                ),
+        )
+
+    private fun resolveResponsiblePitcher(
+        afterRunner: Player?,
+        runnerOnFirst: Player?,
+        runnerOnFirstPitcher: Int?,
+        runnerOnSecond: Player?,
+        runnerOnSecondPitcher: Int?,
+        runnerOnThird: Player?,
+        runnerOnThirdPitcher: Int?,
+        currentPitcherUniformNumber: Int?,
+    ): Int? {
+        if (afterRunner == null) return null
+        return when {
+            runnerOnFirst != null && afterRunner.uniformNumber == runnerOnFirst.uniformNumber -> runnerOnFirstPitcher
+            runnerOnSecond != null && afterRunner.uniformNumber == runnerOnSecond.uniformNumber -> runnerOnSecondPitcher
+            runnerOnThird != null && afterRunner.uniformNumber == runnerOnThird.uniformNumber -> runnerOnThirdPitcher
+            else -> currentPitcherUniformNumber
+        }
+    }
+
+    private fun recordRunEvents(
+        game: Game,
+        atBat: AtBat,
+        scoringRunners: List<Player>,
+        battingTeam: String,
+        pitchingTeam: String,
+        runnerOnFirst: Player?,
+        runnerOnFirstPitcher: Int?,
+        runnerOnSecond: Player?,
+        runnerOnSecondPitcher: Int?,
+        runnerOnThird: Player?,
+        runnerOnThirdPitcher: Int?,
+        currentPitcherUniformNumber: Int?,
+    ) {
+        scoringRunners.forEach { scorer ->
+            val chargedPitcher =
+                resolveResponsiblePitcher(
+                    scorer,
+                    runnerOnFirst,
+                    runnerOnFirstPitcher,
+                    runnerOnSecond,
+                    runnerOnSecondPitcher,
+                    runnerOnThird,
+                    runnerOnThirdPitcher,
+                    currentPitcherUniformNumber,
+                )
+            runEventRepository.save(
+                RunEvent().apply {
+                    gameId = game.id
+                    atBatId = atBat.id
+                    inning = game.inning
+                    scoringTeam = battingTeam
+                    scoringPlayerUniformNumber = scorer.uniformNumber
+                    chargedPitcherUniformNumber = chargedPitcher
+                    chargedPitcherTeam = pitchingTeam
+                },
+            )
+        }
     }
 
     private fun updateAtBatValues(
@@ -227,6 +440,12 @@ class AtBatResolutionService(
         batterNumberSubmission: Int,
         difference: Int,
         hitLocation: HitLocation,
+        runnerOnFirst: Player?,
+        runnerOnFirstPitcher: Int?,
+        runnerOnSecond: Player?,
+        runnerOnSecondPitcher: Int?,
+        runnerOnThird: Player?,
+        runnerOnThirdPitcher: Int?,
     ): AtBat {
         atBat.homeScore = outcome.homeScore
         atBat.awayScore = outcome.awayScore
@@ -240,6 +459,12 @@ class AtBatResolutionService(
         atBat.runnerOnFirstAfter = outcome.runnerOnFirstAfter?.uniformNumber
         atBat.runnerOnSecondAfter = outcome.runnerOnSecondAfter?.uniformNumber
         atBat.runnerOnThirdAfter = outcome.runnerOnThirdAfter?.uniformNumber
+        atBat.runnerOnFirstPitcher = runnerOnFirstPitcher.takeIf { runnerOnFirst != null }
+        atBat.runnerOnSecondPitcher = runnerOnSecondPitcher.takeIf { runnerOnSecond != null }
+        atBat.runnerOnThirdPitcher = runnerOnThirdPitcher.takeIf { runnerOnThird != null }
+        atBat.runnerOnFirstPitcherAfter = outcome.runnerOnFirstPitcherAfter
+        atBat.runnerOnSecondPitcherAfter = outcome.runnerOnSecondPitcherAfter
+        atBat.runnerOnThirdPitcherAfter = outcome.runnerOnThirdPitcherAfter
         atBat.hitDirection = hitLocation.direction
         atBat.battedBallType = hitLocation.battedBallType
         atBat.fielderPosition = hitLocation.fielderPosition

@@ -14,5 +14,9 @@ data class AtBatOutcome(
     val runnerOnSecondAfter: Player?,
     val runnerOnThirdAfter: Player?,
     val baseConditionAfter: BaseCondition,
+    val scoringRunners: List<Player> = emptyList(),
+    val runnerOnFirstPitcherAfter: Int? = null,
+    val runnerOnSecondPitcherAfter: Int? = null,
+    val runnerOnThirdPitcherAfter: Int? = null,
 )
 

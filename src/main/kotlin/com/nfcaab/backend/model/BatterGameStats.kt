@@ -16,10 +16,13 @@ open class BatterGameStats {
     open var id: Int? = null
 
     @Column(name = "game_id", nullable = false)
-    open var gameId: String? = null
+    open var gameId: Int? = null
 
     @Column(name = "game_number", nullable = false)
     open var gameNumber: Int? = null
+
+    @Column(name = "player_id")
+    open var playerId: String? = null
 
     @Column(name = "team", nullable = false)
     open var team: String? = null

@@ -105,6 +105,15 @@ class Game {
     @Column(name = "runner_on_third")
     var runnerOnThird: Int? = null
 
+    @Column(name = "runner_on_first_pitcher")
+    var runnerOnFirstPitcher: Int? = null
+
+    @Column(name = "runner_on_second_pitcher")
+    var runnerOnSecondPitcher: Int? = null
+
+    @Column(name = "runner_on_third_pitcher")
+    var runnerOnThirdPitcher: Int? = null
+
     @Column(name = "home_batter_lineup_spot")
     var homeBatterLineupSpot: Int = 1
 

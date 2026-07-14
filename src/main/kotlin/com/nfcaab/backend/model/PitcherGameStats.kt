@@ -16,10 +16,13 @@ open class PitcherGameStats {
     open var id: Int? = null
 
     @Column(name = "game_id", nullable = false)
-    open var gameId: String? = null
+    open var gameId: Int? = null
 
     @Column(name = "game_number", nullable = false)
     open var gameNumber: Int? = null
+
+    @Column(name = "player_id")
+    open var playerId: String? = null
 
     @Column(name = "team", nullable = false)
     open var team: String? = null
@@ -86,4 +89,13 @@ open class PitcherGameStats {
 
     @Column(name = "double_plays_forced", nullable = false)
     open var doublePlaysForced: Int? = null
+
+    @Column(name = "win", nullable = false)
+    open var win: Boolean = false
+
+    @Column(name = "loss", nullable = false)
+    open var loss: Boolean = false
+
+    @Column(name = "save", nullable = false)
+    open var save: Boolean = false
 }

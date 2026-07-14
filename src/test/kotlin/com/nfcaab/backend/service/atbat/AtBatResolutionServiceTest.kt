@@ -7,13 +7,17 @@ import com.nfcaab.backend.model.Game
 import com.nfcaab.backend.model.Player
 import com.nfcaab.backend.model.Ranges
 import com.nfcaab.backend.repositories.AtBatRepository
+import com.nfcaab.backend.repositories.RunEventRepository
 import com.nfcaab.backend.service.game.GameService
 import com.nfcaab.backend.service.game.GameLifecycleService
 import com.nfcaab.backend.service.player.PlayerService
 import com.nfcaab.backend.service.scorebug.ScorebugService
 import com.nfcaab.backend.service.stats.GameStatsService
+import com.nfcaab.backend.service.stats.PlayerGameStatsService
 import com.nfcaab.backend.util.EncryptionUtils
+import io.mockk.Runs
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -24,10 +28,12 @@ import org.junit.jupiter.api.Test
 
 class AtBatResolutionServiceTest {
     private lateinit var atBatRepository: AtBatRepository
+    private lateinit var runEventRepository: RunEventRepository
     private lateinit var encryptionUtils: EncryptionUtils
     private lateinit var gameService: GameService
     private lateinit var gameLifecycleService: GameLifecycleService
     private lateinit var gameStatsService: GameStatsService
+    private lateinit var playerGameStatsService: PlayerGameStatsService
     private lateinit var rangesService: RangesService
     private lateinit var scorebugService: ScorebugService
     private lateinit var playerService: PlayerService
@@ -38,10 +44,12 @@ class AtBatResolutionServiceTest {
     @BeforeEach
     fun setUp() {
         atBatRepository = mockk()
+        runEventRepository = mockk()
         encryptionUtils = mockk()
         gameService = mockk()
         gameLifecycleService = mockk()
         gameStatsService = mockk()
+        playerGameStatsService = mockk()
         rangesService = mockk()
         scorebugService = mockk()
         playerService = mockk()
@@ -50,10 +58,12 @@ class AtBatResolutionServiceTest {
         atBatResolutionService =
             AtBatResolutionService(
                 atBatRepository,
+                runEventRepository,
                 encryptionUtils,
                 gameService,
                 gameLifecycleService,
                 gameStatsService,
+                playerGameStatsService,
                 rangesService,
                 scorebugService,
                 playerService,
@@ -135,6 +145,7 @@ class AtBatResolutionServiceTest {
         every { scorebugService.generateScorebug(game) } returns mockk()
         every { atBatRepository.getAllAtBatsByGameId(1) } returns emptyList()
         every { gameStatsService.updateGameStats(game, emptyList()) } returns emptyList()
+        every { playerGameStatsService.updatePlayerGameStats(game, emptyList()) } just Runs
         every {
             hitLocationService.buildFieldingNotation(Game.ActualResult.STRIKEOUT, null, null)
         } returns null
@@ -188,6 +199,7 @@ class AtBatResolutionServiceTest {
                 runnerOnSecondAfter = null,
                 runnerOnThirdAfter = null,
                 baseConditionAfter = Game.BaseCondition.FIRST,
+                runnerOnFirstPitcherAfter = 42,
             )
 
         every { gameService.getDifference(55, 42) } returns 5
@@ -212,6 +224,7 @@ class AtBatResolutionServiceTest {
         every { scorebugService.generateScorebug(game) } returns mockk()
         every { atBatRepository.getAllAtBatsByGameId(1) } returns emptyList()
         every { gameStatsService.updateGameStats(game, emptyList()) } returns emptyList()
+        every { playerGameStatsService.updatePlayerGameStats(game, emptyList()) } just Runs
         every { encryptionUtils.encrypt("55") } returns "encrypted-batter-55"
         every { encryptionUtils.encrypt("42") } returns "re-encrypted-pitcher-42"
         every { atBatRepository.save(any()) } answers { firstArg() }
@@ -279,6 +292,7 @@ class AtBatResolutionServiceTest {
         every { scorebugService.generateScorebug(game) } returns mockk()
         every { atBatRepository.getAllAtBatsByGameId(1) } returns emptyList()
         every { gameStatsService.updateGameStats(game, emptyList()) } returns emptyList()
+        every { playerGameStatsService.updatePlayerGameStats(game, emptyList()) } just Runs
         every { encryptionUtils.encrypt("17") } returns "encrypted-batter-17"
         every { encryptionUtils.encrypt("42") } returns "re-encrypted-pitcher-42"
         every { atBatRepository.save(any()) } answers { firstArg() }
@@ -328,6 +342,7 @@ class AtBatResolutionServiceTest {
         every { scorebugService.generateScorebug(game) } returns mockk()
         every { atBatRepository.getAllAtBatsByGameId(1) } returns emptyList()
         every { gameStatsService.updateGameStats(game, emptyList()) } returns emptyList()
+        every { playerGameStatsService.updatePlayerGameStats(game, emptyList()) } just Runs
         every { encryptionUtils.encrypt(any()) } returns "encrypted"
         every { atBatRepository.save(any()) } answers { firstArg() }
 
