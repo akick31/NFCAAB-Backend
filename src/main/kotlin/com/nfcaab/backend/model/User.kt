@@ -42,9 +42,6 @@ class User {
     @Column(name = "role", nullable = false)
     lateinit var role: Role
 
-    @Column(name = "salt", nullable = false)
-    var salt: String? = null
-
     @Column(name = "team")
     var team: String? = null
 
@@ -115,7 +112,6 @@ class User {
         hashedEmail: String?,
         password: String,
         role: Role,
-        salt: String?,
         team: String?,
         delayOfGameInstances: Int,
         wins: Int,
@@ -145,7 +141,6 @@ class User {
         this.password = password
         this.position = position
         this.role = role
-        this.salt = salt
         this.team = team
         this.delayOfGameInstances = delayOfGameInstances
         this.wins = wins

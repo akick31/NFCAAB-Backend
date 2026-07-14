@@ -45,9 +45,6 @@ class NewSignup {
     @Column(name = "password")
     lateinit var password: String
 
-    @Column(name = "salt")
-    var salt: String? = null
-
     @Column(name = "verification_token")
     var verificationToken: String? = null
 
@@ -69,7 +66,6 @@ class NewSignup {
         email: String,
         hashedEmail: String?,
         password: String,
-        salt: String?,
         verificationToken: String?,
         approved: Boolean,
     ) {
@@ -83,7 +79,6 @@ class NewSignup {
         this.email = email
         this.hashedEmail = hashedEmail
         this.password = password
-        this.salt = salt
         this.verificationToken = verificationToken
         this.approved = approved
     }

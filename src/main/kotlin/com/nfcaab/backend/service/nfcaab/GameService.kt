@@ -41,7 +41,7 @@ import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Pageable
 import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
-import java.lang.Thread.sleep
+import kotlinx.coroutines.delay
 import java.sql.Timestamp
 import java.time.Instant
 import java.time.LocalDateTime
@@ -473,9 +473,9 @@ class GameService(
         for (game in gamesToStart) {
             try {
                 if (count >= 25) {
-                    sleep(300000)
+                    delay(300000)
                     count = 0
-                    Logger.info("Block of 25 games started, sleeping for 5 minutes")
+                    Logger.info("Block of 25 games started, delaying for 5 minutes")
                 }
                 val startedGame =
                     startGame(

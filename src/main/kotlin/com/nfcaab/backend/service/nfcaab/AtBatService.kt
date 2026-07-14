@@ -1324,8 +1324,8 @@ class AtBatService(
         }
         atBat.difference = difference
         atBat.submissionType = submissionType
-        atBat.batterNumberSubmission = batterNumberSubmission.toString()
-        atBat.pitcherNumberSubmission = decryptedPitcherNumber
+        atBat.batterNumberSubmission = encryptionUtils.encrypt(batterNumberSubmission.toString())
+        atBat.pitcherNumberSubmission = encryptionUtils.encrypt(decryptedPitcherNumber)
         atBat.atBatFinished = true
 
         return saveAtBat(atBat)
@@ -1396,8 +1396,8 @@ class AtBatService(
     ): AtBat {
         atBat.homeScore = outcome.homeScore
         atBat.awayScore = outcome.awayScore
-        atBat.batterNumberSubmission = batterNumberSubmission.toString()
-        atBat.pitcherNumberSubmission = decryptedPitcherNumber.toString()
+        atBat.batterNumberSubmission = encryptionUtils.encrypt(batterNumberSubmission.toString())
+        atBat.pitcherNumberSubmission = encryptionUtils.encrypt(decryptedPitcherNumber.toString())
         atBat.difference = difference
         atBat.submissionType = submissionType
         atBat.result = result

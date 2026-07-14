@@ -191,7 +191,6 @@ class UserService(
 
         val passwordEncoder = BCryptPasswordEncoder()
         user.password = passwordEncoder.encode(newPassword)
-        user.salt = passwordEncoder.encode(newPassword)
         user.resetToken = null
         user.resetTokenExpiration = null
 

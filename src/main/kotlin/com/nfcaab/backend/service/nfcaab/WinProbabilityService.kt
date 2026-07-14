@@ -37,42 +37,34 @@ class WinProbabilityService(
         homeElo: Double,
         awayElo: Double,
     ): Double {
-        try {
-            val scoreDiff = atBat.homeScore - atBat.awayScore
-            val inningsRemaining = calculateInningsRemaining(atBat.inning, atBat.inningHalf)
-            val outs = atBat.outs
-            val bases = calculateBasesOccupied(atBat)
+        val scoreDiff = atBat.homeScore - atBat.awayScore
+        val inningsRemaining = calculateInningsRemaining(atBat.inning, atBat.inningHalf)
+        val outs = atBat.outs
+        val bases = calculateBasesOccupied(atBat)
 
-            // Calculate ELO difference with time decay
-            val eloDiffTime = calculateEloDiffTime(homeElo, awayElo, inningsRemaining)
+        // Calculate ELO difference with time decay
+        val eloDiffTime = calculateEloDiffTime(homeElo, awayElo, inningsRemaining)
 
-            // Base win probability from ELO ratings
-            val eloWinProb = calculateExpectedScore(homeElo, awayElo)
+        // Base win probability from ELO ratings
+        val eloWinProb = calculateExpectedScore(homeElo, awayElo)
 
-            // Adjust for score difference (more important in late innings)
-            val scoreAdjustment = calculateScoreAdjustment(scoreDiff, inningsRemaining)
+        // Adjust for score difference (more important in late innings)
+        val scoreAdjustment = calculateScoreAdjustment(scoreDiff, inningsRemaining)
 
-            // Adjust for game situation (outs, bases, inning)
-            val situationAdjustment = calculateSituationAdjustment(outs, bases, inningsRemaining)
+        // Adjust for game situation (outs, bases, inning)
+        val situationAdjustment = calculateSituationAdjustment(outs, bases, inningsRemaining)
 
-            // Combine adjustments
-            val winProbability = (eloWinProb + scoreAdjustment + situationAdjustment).coerceIn(0.0, 1.0)
+        // Combine adjustments
+        val winProbability = (eloWinProb + scoreAdjustment + situationAdjustment).coerceIn(0.0, 1.0)
 
-            // Calculate win probability added
-            val winProbabilityAdded = calculateWinProbabilityAdded(game, atBat, winProbability)
+        // Calculate win probability added
+        val winProbabilityAdded = calculateWinProbabilityAdded(game, atBat, winProbability)
 
-            // Set the win probability and change on the plate appearance
-            atBat.winProbability = winProbability.toFloat()
-            atBat.winProbabilityAdded = winProbabilityAdded.toFloat()
+        // Set the win probability and change on the plate appearance
+        atBat.winProbability = winProbability.toFloat()
+        atBat.winProbabilityAdded = winProbabilityAdded.toFloat()
 
-            return winProbability
-        } catch (e: Exception) {
-            logger.error("Error calculating win probability: ${e.message}", e)
-            val defaultProbability = 0.5
-            atBat.winProbability = defaultProbability.toFloat()
-            atBat.winProbabilityAdded = 0.0F
-            return defaultProbability
-        }
+        return winProbability
     }
 
     /**
@@ -151,13 +143,8 @@ class WinProbabilityService(
         currentWinProbability: Double,
     ): Double {
         // Get the previous plate appearance for proper WPA calculation
-                val previousAtBat =
-            try {
-                val allAtBats = atBatService.getAllAtBatsByGameId(atBat.gameId)
-                allAtBats.sortedBy { it.id }.findLast { it.id < atBat.id }
-            } catch (e: Exception) {
-                null
-            }
+        val allAtBats = atBatService.getAllAtBatsByGameId(atBat.gameId)
+        val previousAtBat = allAtBats.sortedBy { it.id }.findLast { it.id < atBat.id }
 
         val winProbabilityAdded =
             if (previousAtBat != null) {
@@ -204,28 +191,24 @@ class WinProbabilityService(
         homeTeam: Team,
         awayTeam: Team,
     ) {
-        try {
-            val homeScore = game.homeScore
-            val awayScore = game.awayScore
-            val homeWon = homeScore > awayScore
+        val homeScore = game.homeScore
+        val awayScore = game.awayScore
+        val homeWon = homeScore > awayScore
 
-            // Use K-factor from model parameters
-            val expectedHome = calculateExpectedScore(homeTeam.currentElo, awayTeam.currentElo)
-            val expectedAway = 1.0 - expectedHome
+        // Use K-factor from model parameters
+        val expectedHome = calculateExpectedScore(homeTeam.currentElo, awayTeam.currentElo)
+        val expectedAway = 1.0 - expectedHome
 
-            val actualHome = if (homeWon) 1.0 else 0.0
-            val actualAway = 1.0 - actualHome
+        val actualHome = if (homeWon) 1.0 else 0.0
+        val actualAway = 1.0 - actualHome
 
-            val newHomeElo = homeTeam.currentElo + kFactor * (actualHome - expectedHome)
-            val newAwayElo = awayTeam.currentElo + kFactor * (actualAway - expectedAway)
+        val newHomeElo = homeTeam.currentElo + kFactor * (actualHome - expectedHome)
+        val newAwayElo = awayTeam.currentElo + kFactor * (actualAway - expectedAway)
 
-            homeTeam.currentElo = newHomeElo
-            awayTeam.currentElo = newAwayElo
+        homeTeam.currentElo = newHomeElo
+        awayTeam.currentElo = newAwayElo
 
-            logger.info("Updated ELO ratings - ${game.homeTeam}: ${newHomeElo.toInt()}, ${game.awayTeam}: ${newAwayElo.toInt()}")
-        } catch (e: Exception) {
-            logger.error("Error updating ELO ratings: ${e.message}", e)
-        }
+        logger.info("Updated ELO ratings - ${game.homeTeam}: ${newHomeElo.toInt()}, ${game.awayTeam}: ${newAwayElo.toInt()}")
     }
 
     /**
@@ -242,19 +225,14 @@ class WinProbabilityService(
      * Get ELO ratings for all teams
      */
     fun getEloRatings(teams: List<Team>): List<EloRatingResponse> =
-        try {
-            teams.map { team ->
-                EloRatingResponse(
-                    teamId = team.id ?: 0,
-                    teamName = team.name,
-                    currentElo = team.currentElo,
-                    overallElo = team.overallElo,
-                )
-            }.sortedByDescending { it.currentElo }
-        } catch (e: Exception) {
-            logger.error("Error getting ELO ratings response: ${e.message}", e)
-            throw e
-        }
+        teams.map { team ->
+            EloRatingResponse(
+                teamId = team.id ?: 0,
+                teamName = team.name,
+                currentElo = team.currentElo,
+                overallElo = team.overallElo,
+            )
+        }.sortedByDescending { it.currentElo }
 
     /**
      * Get win probability for each team for all plate appearances in a game
@@ -262,38 +240,34 @@ class WinProbabilityService(
     fun getWinProbabilitiesForGame(
         gameId: Int,
         atBats: List<AtBat>,
-    ): GameWinProbabilitiesResponse =
-        try {
-            val results =
-                atBats.sortedBy { it.id }.map { pa ->
-                    val homeTeamWinProbability =
-                        if (pa.inningHalf == Game.InningHalf.TOP) {
-                            1.0 - (pa.winProbability.toDouble())
-                        } else {
-                            pa.winProbability.toDouble()
-                        }
-                    val awayTeamWinProbability = 1.0 - homeTeamWinProbability
+    ): GameWinProbabilitiesResponse {
+        val results =
+            atBats.sortedBy { it.id }.map { pa ->
+                val homeTeamWinProbability =
+                    if (pa.inningHalf == Game.InningHalf.TOP) {
+                        1.0 - (pa.winProbability.toDouble())
+                    } else {
+                        pa.winProbability.toDouble()
+                    }
+                val awayTeamWinProbability = 1.0 - homeTeamWinProbability
 
-                    PlayWinProbabilityResponse(
-                        playNumber = pa.id,
-                        inning = pa.inning,
-                        inningHalf = pa.inningHalf.name,
-                        homeScore = pa.homeScore,
-                        awayScore = pa.awayScore,
-                        homeTeamWinProbability = homeTeamWinProbability,
-                        awayTeamWinProbability = awayTeamWinProbability,
-                    )
-                }
+                PlayWinProbabilityResponse(
+                    playNumber = pa.id,
+                    inning = pa.inning,
+                    inningHalf = pa.inningHalf.name,
+                    homeScore = pa.homeScore,
+                    awayScore = pa.awayScore,
+                    homeTeamWinProbability = homeTeamWinProbability,
+                    awayTeamWinProbability = awayTeamWinProbability,
+                )
+            }
 
-            GameWinProbabilitiesResponse(
-                gameId = gameId,
-                totalPlays = atBats.size,
-                plays = results,
-            )
-        } catch (e: Exception) {
-            logger.error("Error getting team win probabilities response: ${e.message}", e)
-            throw e
-        }
+        return GameWinProbabilitiesResponse(
+            gameId = gameId,
+            totalPlays = atBats.size,
+            plays = results,
+        )
+    }
 
     /**
      * Calculate win probability for all plate appearances in a specific game
@@ -306,81 +280,76 @@ class WinProbabilityService(
         awayTeam: Team,
         atBatService: AtBatService,
     ): SingleGameWinProbabilitiesResponse {
-        try {
-            val gameStats = gameStatsService.getGameStatsById(gameId)
-            val statsMap = gameStats.associateBy { it.team }
+        val gameStats = gameStatsService.getGameStatsById(gameId)
+        val statsMap = gameStats.associateBy { it.team }
 
-            val currentHomeElo = homeTeam.currentElo
-            val currentAwayElo = awayTeam.currentElo
+        val currentHomeElo = homeTeam.currentElo
+        val currentAwayElo = awayTeam.currentElo
 
-            var previousAtBat: AtBat? = null
-            val processedAtBats = mutableListOf<SinglePlayWinProbabilityResponse>()
+        var previousAtBat: AtBat? = null
+        val processedAtBats = mutableListOf<SinglePlayWinProbabilityResponse>()
 
-            val sortedAtBats = atBats.sortedBy { it.id }
+        val sortedAtBats = atBats.sortedBy { it.id }
 
-            for (pa in sortedAtBats) {
-                val homeElo = homeTeam.currentElo
-                val awayElo = awayTeam.currentElo
+        for (pa in sortedAtBats) {
+            val homeElo = homeTeam.currentElo
+            val awayElo = awayTeam.currentElo
 
-                val winProbability = calculateWinProbability(game, pa, homeElo, awayElo)
+            val winProbability = calculateWinProbability(game, pa, homeElo, awayElo)
 
-                val winProbabilityAdded =
-                    previousAtBat?.let { prev ->
-                        val prevWinProb =
-                            if (prev.inningHalf == Game.InningHalf.TOP) {
-                                1.0 - (prev.winProbability.toDouble())
-                            } else {
-                                prev.winProbability.toDouble()
-                            }
-                        val currentWinProb =
-                            if (pa.inningHalf == Game.InningHalf.TOP) {
-                                1.0 - winProbability
-                            } else {
-                                winProbability
-                            }
-
-                        if (pa.inningHalf != prev.inningHalf) {
-                            currentWinProb - prevWinProb
+            val winProbabilityAdded =
+                previousAtBat?.let { prev ->
+                    val prevWinProb =
+                        if (prev.inningHalf == Game.InningHalf.TOP) {
+                            1.0 - (prev.winProbability.toDouble())
                         } else {
-                            currentWinProb - prevWinProb
+                            prev.winProbability.toDouble()
                         }
-                    } ?: 0.0
+                    val currentWinProb =
+                        if (pa.inningHalf == Game.InningHalf.TOP) {
+                            1.0 - winProbability
+                        } else {
+                            winProbability
+                        }
 
-                // Save plate appearance with updated win probability
-                atBatRepository.save(pa)
+                    if (pa.inningHalf != prev.inningHalf) {
+                        currentWinProb - prevWinProb
+                    } else {
+                        currentWinProb - prevWinProb
+                    }
+                } ?: 0.0
 
-                processedAtBats.add(
-                    SinglePlayWinProbabilityResponse(
-                        playId = pa.id,
-                        playNumber = pa.id,
-                        inning = pa.inning,
-                        inningHalf = pa.inningHalf.name,
-                        homeScore = pa.homeScore,
-                        awayScore = pa.awayScore,
-                        winProbability = winProbability,
-                        winProbabilityAdded = winProbabilityAdded,
-                        possession = pa.inningHalf.name,
-                        possessionTeam = if (pa.inningHalf == Game.InningHalf.TOP) game.awayTeam else game.homeTeam,
-                        homeElo = currentHomeElo,
-                        awayElo = currentAwayElo,
-                    ),
-                )
+            // Save plate appearance with updated win probability
+            atBatRepository.save(pa)
 
-                previousAtBat = pa
-            }
-
-            return SingleGameWinProbabilitiesResponse(
-                gameId = gameId,
-                homeTeam = game.homeTeam,
-                awayTeam = game.awayTeam,
-                totalPlays = atBats.size,
-                processedPlays = processedAtBats.size,
-                plays = processedAtBats,
+            processedAtBats.add(
+                SinglePlayWinProbabilityResponse(
+                    playId = pa.id,
+                    playNumber = pa.id,
+                    inning = pa.inning,
+                    inningHalf = pa.inningHalf.name,
+                    homeScore = pa.homeScore,
+                    awayScore = pa.awayScore,
+                    winProbability = winProbability,
+                    winProbabilityAdded = winProbabilityAdded,
+                    possession = pa.inningHalf.name,
+                    possessionTeam = if (pa.inningHalf == Game.InningHalf.TOP) game.awayTeam else game.homeTeam,
+                    homeElo = currentHomeElo,
+                    awayElo = currentAwayElo,
+                ),
             )
-        } catch (e: Exception) {
-            logger.error("Error calculating win probability for game response: ${e.message}", e)
-            throw e
+
+            previousAtBat = pa
         }
+
+        return SingleGameWinProbabilitiesResponse(
+            gameId = gameId,
+            homeTeam = game.homeTeam,
+            awayTeam = game.awayTeam,
+            totalPlays = atBats.size,
+            processedPlays = processedAtBats.size,
+            plays = processedAtBats,
+        )
     }
 
     /**
@@ -390,58 +359,53 @@ class WinProbabilityService(
         games: List<Game>,
         atBatService: AtBatService,
         teamService: TeamService,
-    ): WinProbabilitiesForAllGamesResponse =
-        try {
-            var totalGamesProcessed = 0
-            var totalAtBatsProcessed = 0
-            val processedGames = mutableListOf<ProcessedGameResult>()
+    ): WinProbabilitiesForAllGamesResponse {
+        var totalGamesProcessed = 0
+        var totalAtBatsProcessed = 0
+        val processedGames = mutableListOf<ProcessedGameResult>()
 
-            games.forEach { game ->
-                try {
-                    val atBats = atBatService.getAllAtBatsByGameId(game.id)
-                    if (atBats.isNotEmpty()) {
-                        val homeTeam = teamService.getTeamByName(game.homeTeam)
-                        val awayTeam = teamService.getTeamByName(game.awayTeam)
+        // Each game is isolated: one bad game shouldn't stop the rest of the batch from being processed.
+        games.forEach { game ->
+            try {
+                val atBats = atBatService.getAllAtBatsByGameId(game.id)
+                if (atBats.isNotEmpty()) {
+                    val homeTeam = teamService.getTeamByName(game.homeTeam)
+                    val awayTeam = teamService.getTeamByName(game.awayTeam)
 
-                        // Use the single game method to calculate win probabilities
-                        val singleGameResult =
-                            calculateWinProbabilitiesForSingleGame(
-                                game.id,
-                                game,
-                                atBats,
-                                homeTeam,
-                                awayTeam,
-                                atBatService,
-                            )
-
-                        // Add to our results
-                        processedGames.add(
-                            ProcessedGameResult(
-                                gameId = game.id,
-                                homeTeam = game.homeTeam,
-                                awayTeam = game.awayTeam,
-                                playsProcessed = singleGameResult.processedPlays,
-                            ),
+                    // Use the single game method to calculate win probabilities
+                    val singleGameResult =
+                        calculateWinProbabilitiesForSingleGame(
+                            game.id,
+                            game,
+                            atBats,
+                            homeTeam,
+                            awayTeam,
+                            atBatService,
                         )
 
-                        totalAtBatsProcessed += singleGameResult.processedPlays
-                        totalGamesProcessed++
-                    }
-                } catch (e: Exception) {
-                    // Log error but continue with other games
-                    logger.error("Error processing game ${game.id}: ${e.message}")
+                    // Add to our results
+                    processedGames.add(
+                        ProcessedGameResult(
+                            gameId = game.id,
+                            homeTeam = game.homeTeam,
+                            awayTeam = game.awayTeam,
+                            playsProcessed = singleGameResult.processedPlays,
+                        ),
+                    )
+
+                    totalAtBatsProcessed += singleGameResult.processedPlays
+                    totalGamesProcessed++
                 }
+            } catch (e: Exception) {
+                logger.error("Error processing game ${game.id}, skipping it and continuing the batch: ${e.message}", e)
             }
-
-            WinProbabilitiesForAllGamesResponse(
-                totalGames = games.size,
-                gamesProcessed = totalGamesProcessed,
-                totalPlaysProcessed = totalAtBatsProcessed,
-                processedGames = processedGames,
-            )
-        } catch (e: Exception) {
-            logger.error("Error calculating win probability for all games response: ${e.message}", e)
-            throw e
         }
-}
 
+        return WinProbabilitiesForAllGamesResponse(
+            totalGames = games.size,
+            gamesProcessed = totalGamesProcessed,
+            totalPlaysProcessed = totalAtBatsProcessed,
+            processedGames = processedGames,
+        )
+    }
+}

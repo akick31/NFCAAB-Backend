@@ -9,6 +9,7 @@ import com.nfcaab.backend.repositories.NewSignupRepository
 import com.nfcaab.backend.repositories.UserRepository
 import com.nfcaab.backend.util.EmailNotFoundException
 import com.nfcaab.backend.util.EncryptionUtils
+import com.nfcaab.backend.util.Logger
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.stereotype.Service
 import java.util.UUID
@@ -27,7 +28,6 @@ class NewSignupService(
      */
     fun createNewSignup(newSignup: NewSignup): NewSignup {
         val passwordEncoder = BCryptPasswordEncoder()
-        val salt = passwordEncoder.encode(newSignup.password)
         val verificationToken = UUID.randomUUID().toString()
         if (newSignup.email.isNullOrBlank()) {
             throw EmailNotFoundException("New signup email cannot be null or blank")
@@ -60,7 +60,6 @@ class NewSignupService(
                         ?: throw EmailNotFoundException("New signup email cannot be null or blank"),
                 ),
                 passwordEncoder.encode(newSignup.password),
-                salt,
                 verificationToken,
                 false,
             )
@@ -89,7 +88,6 @@ class NewSignupService(
             user.hashedEmail = newSignup.hashedEmail
             user.password = newSignup.password
             user.role = USER
-            user.salt = newSignup.salt
             user.team = null
             user.delayOfGameInstances = 0
             user.wins = 0
@@ -109,7 +107,8 @@ class NewSignupService(
             userService.saveUser(user)
             return true
         } catch (e: Exception) {
-            return false
+            Logger.error("Error approving new signup ${newSignup.id}: ${e.message}", e)
+            throw e
         }
     }
 

@@ -10,6 +10,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -129,5 +130,58 @@ class AtBatServiceTest {
         verify { atBatRepository.getAtBatByGameIdAndPitchNumber(gameId, game.numAtBat) }
         verify { encryptionUtils.decrypt(atBat.pitcherNumberSubmission) }
     }
-}
 
+    @Test
+    fun `steal resolution re-encrypts both numbers instead of persisting them as plaintext`() {
+        val gameId = 1
+        val batterSubmitter = "batterUser"
+        val batterNumberSubmission = 17
+        val submissionType = SubmissionType.STEAL
+
+        val game =
+            Game().apply {
+                id = gameId
+                currentAtBatId = 9
+                inningHalf = Game.InningHalf.TOP
+                homeTeam = "Team A"
+                awayTeam = "Team B"
+                gameStatus = Game.GameStatus.IN_PROGRESS
+            }
+
+        val pendingAtBat =
+            AtBat().apply {
+                id = 9
+                gameId = gameId
+                battingTeam = "Team B"
+                pitcherNumberSubmission = "encrypted-pitcher-42"
+            }
+
+        val stealResult = mockk<com.nfcaab.backend.model.Ranges>()
+        every { stealResult.result } returns Game.Scenario.STEAL_SUCCESS
+
+        every { gameService.getGameById(gameId) } returns game
+        every { atBatRepository.getAtBatById(9) } returns pendingAtBat
+        every { encryptionUtils.decrypt("encrypted-pitcher-42") } returns "42"
+        every { gameService.getDifference(batterNumberSubmission, 42) } returns 5
+        every { rangesService.getStealResult(5) } returns stealResult
+        every { encryptionUtils.encrypt(batterNumberSubmission.toString()) } returns "encrypted-batter-17"
+        every { encryptionUtils.encrypt("42") } returns "re-encrypted-pitcher-42"
+        every { atBatRepository.save(any()) } answers { firstArg() }
+
+        val result =
+            atBatService.batterNumberSubmitted(
+                gameId,
+                batterSubmitter,
+                batterNumberSubmission,
+                submissionType,
+            )
+
+        assertNotNull(result)
+        assertEquals("encrypted-batter-17", result.batterNumberSubmission)
+        assertEquals("re-encrypted-pitcher-42", result.pitcherNumberSubmission)
+        assertNotEquals(batterNumberSubmission.toString(), result.batterNumberSubmission)
+        assertNotEquals("42", result.pitcherNumberSubmission)
+        verify { encryptionUtils.encrypt(batterNumberSubmission.toString()) }
+        verify { encryptionUtils.encrypt("42") }
+    }
+}

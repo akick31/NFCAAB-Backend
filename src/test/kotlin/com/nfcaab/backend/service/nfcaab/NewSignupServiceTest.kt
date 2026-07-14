@@ -107,7 +107,6 @@ class NewSignupServiceTest {
             email = "encrypted-email"
             hashedEmail = "hashed-email"
             password = "hashed-password"
-            salt = "salt"
             coachName = "Test Coach"
             discordTag = "test#1234"
             discordId = "123456"

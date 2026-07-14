@@ -65,7 +65,7 @@ class SessionService(
      * Get the user id from the token
      * @param token
      */
-    private fun extractUserIdFromToken(token: String): Long {
+    fun extractUserIdFromToken(token: String): Long {
         val claims = Jwts.parser().setSigningKey(secretKey).parseClaimsJws(token)
         return claims.body.subject.toLong() // The subject contains the userId
     }
