@@ -72,6 +72,9 @@ class AtBatResolutionService(
         val runnerOnFirst = atBat.runnerOnFirst?.let { playerService.getPlayerByNumberAndTeam(atBat.battingTeam ?: "", it) }
         val runnerOnSecond = atBat.runnerOnSecond?.let { playerService.getPlayerByNumberAndTeam(atBat.battingTeam ?: "", it) }
         val runnerOnThird = atBat.runnerOnThird?.let { playerService.getPlayerByNumberAndTeam(atBat.battingTeam ?: "", it) }
+        val runnerOnFirstPitcher = game.runnerOnFirstPitcher
+        val runnerOnSecondPitcher = game.runnerOnSecondPitcher
+        val runnerOnThirdPitcher = game.runnerOnThirdPitcher
         val baseConditionBefore = gameService.getBaseCondition(runnerOnFirst, runnerOnSecond, runnerOnThird)
 
         val outcome =
@@ -94,11 +97,11 @@ class AtBatResolutionService(
             enrichOutcomeWithResponsiblePitchers(
                 outcome,
                 runnerOnFirst,
-                game.runnerOnFirstPitcher,
+                runnerOnFirstPitcher,
                 runnerOnSecond,
-                game.runnerOnSecondPitcher,
+                runnerOnSecondPitcher,
                 runnerOnThird,
-                game.runnerOnThirdPitcher,
+                runnerOnThirdPitcher,
                 pitcher.uniformNumber,
             )
 
@@ -111,11 +114,11 @@ class AtBatResolutionService(
             atBat.battingTeam ?: "",
             atBat.pitchingTeam ?: "",
             runnerOnFirst,
-            game.runnerOnFirstPitcher,
+            runnerOnFirstPitcher,
             runnerOnSecond,
-            game.runnerOnSecondPitcher,
+            runnerOnSecondPitcher,
             runnerOnThird,
-            game.runnerOnThirdPitcher,
+            runnerOnThirdPitcher,
             pitcher.uniformNumber,
         )
 
@@ -144,11 +147,11 @@ class AtBatResolutionService(
             difference,
             resolvedHitLocation,
             runnerOnFirst,
-            game.runnerOnFirstPitcher,
+            runnerOnFirstPitcher,
             runnerOnSecond,
-            game.runnerOnSecondPitcher,
+            runnerOnSecondPitcher,
             runnerOnThird,
-            game.runnerOnThirdPitcher,
+            runnerOnThirdPitcher,
         )
     }
 
@@ -163,6 +166,9 @@ class AtBatResolutionService(
         val runnerOnFirst = atBat.runnerOnFirst?.let { playerService.getPlayerByNumberAndTeam(atBat.battingTeam ?: "", it) }
         val runnerOnSecond = atBat.runnerOnSecond?.let { playerService.getPlayerByNumberAndTeam(atBat.battingTeam ?: "", it) }
         val runnerOnThird = atBat.runnerOnThird?.let { playerService.getPlayerByNumberAndTeam(atBat.battingTeam ?: "", it) }
+        val runnerOnFirstPitcher = game.runnerOnFirstPitcher
+        val runnerOnSecondPitcher = game.runnerOnSecondPitcher
+        val runnerOnThirdPitcher = game.runnerOnThirdPitcher
         val runner = baseRunningService.leadRunner(runnerOnFirst, runnerOnSecond, runnerOnThird)
         val pitcher =
             playerService.getPlayerByNumberAndTeam(
@@ -192,11 +198,11 @@ class AtBatResolutionService(
             enrichOutcomeWithResponsiblePitchers(
                 outcome,
                 runnerOnFirst,
-                game.runnerOnFirstPitcher,
+                runnerOnFirstPitcher,
                 runnerOnSecond,
-                game.runnerOnSecondPitcher,
+                runnerOnSecondPitcher,
                 runnerOnThird,
-                game.runnerOnThirdPitcher,
+                runnerOnThirdPitcher,
                 pitcher.uniformNumber,
             )
 
@@ -209,11 +215,11 @@ class AtBatResolutionService(
             atBat.battingTeam ?: "",
             atBat.pitchingTeam ?: "",
             runnerOnFirst,
-            game.runnerOnFirstPitcher,
+            runnerOnFirstPitcher,
             runnerOnSecond,
-            game.runnerOnSecondPitcher,
+            runnerOnSecondPitcher,
             runnerOnThird,
-            game.runnerOnThirdPitcher,
+            runnerOnThirdPitcher,
             pitcher.uniformNumber,
         )
 
@@ -232,11 +238,11 @@ class AtBatResolutionService(
             difference,
             HitLocation(null, null, null),
             runnerOnFirst,
-            game.runnerOnFirstPitcher,
+            runnerOnFirstPitcher,
             runnerOnSecond,
-            game.runnerOnSecondPitcher,
+            runnerOnSecondPitcher,
             runnerOnThird,
-            game.runnerOnThirdPitcher,
+            runnerOnThirdPitcher,
         )
     }
 
@@ -256,6 +262,9 @@ class AtBatResolutionService(
         val runnerOnFirst = atBat.runnerOnFirst?.let { playerService.getPlayerByNumberAndTeam(atBat.battingTeam ?: "", it) }
         val runnerOnSecond = atBat.runnerOnSecond?.let { playerService.getPlayerByNumberAndTeam(atBat.battingTeam ?: "", it) }
         val runnerOnThird = atBat.runnerOnThird?.let { playerService.getPlayerByNumberAndTeam(atBat.battingTeam ?: "", it) }
+        val runnerOnFirstPitcher = game.runnerOnFirstPitcher
+        val runnerOnSecondPitcher = game.runnerOnSecondPitcher
+        val runnerOnThirdPitcher = game.runnerOnThirdPitcher
         val baseConditionBefore = gameService.getBaseCondition(runnerOnFirst, runnerOnSecond, runnerOnThird)
 
         val outcome =
@@ -278,11 +287,11 @@ class AtBatResolutionService(
             enrichOutcomeWithResponsiblePitchers(
                 outcome,
                 runnerOnFirst,
-                game.runnerOnFirstPitcher,
+                runnerOnFirstPitcher,
                 runnerOnSecond,
-                game.runnerOnSecondPitcher,
+                runnerOnSecondPitcher,
                 runnerOnThird,
-                game.runnerOnThirdPitcher,
+                runnerOnThirdPitcher,
                 currentPitcherUniformNumber,
             )
 
@@ -295,11 +304,11 @@ class AtBatResolutionService(
             atBat.battingTeam ?: "",
             atBat.pitchingTeam ?: "",
             runnerOnFirst,
-            game.runnerOnFirstPitcher,
+            runnerOnFirstPitcher,
             runnerOnSecond,
-            game.runnerOnSecondPitcher,
+            runnerOnSecondPitcher,
             runnerOnThird,
-            game.runnerOnThirdPitcher,
+            runnerOnThirdPitcher,
             currentPitcherUniformNumber,
         )
 
@@ -318,11 +327,11 @@ class AtBatResolutionService(
             difference,
             HitLocation(null, null, null),
             runnerOnFirst,
-            game.runnerOnFirstPitcher,
+            runnerOnFirstPitcher,
             runnerOnSecond,
-            game.runnerOnSecondPitcher,
+            runnerOnSecondPitcher,
             runnerOnThird,
-            game.runnerOnThirdPitcher,
+            runnerOnThirdPitcher,
         )
     }
 
