@@ -98,4 +98,17 @@ interface GameRepository : CrudRepository<Game, Int>, JpaSpecificationExecutor<G
     @Modifying
     @Query(value = "UPDATE game SET upset_alert_pinged = true WHERE game_id = ?", nativeQuery = true)
     fun markUpsetAlertPinged(gameId: Int)
+
+    @Query(
+        value =
+            "SELECT COUNT(*) FROM game " +
+                "WHERE (home_team = :team OR away_team = :team) " +
+                "AND game_id > :gameId " +
+                "AND game_status = 'FINAL'",
+        nativeQuery = true,
+    )
+    fun countFinishedGamesByTeamSinceGameId(
+        team: String,
+        gameId: Int,
+    ): Int
 }

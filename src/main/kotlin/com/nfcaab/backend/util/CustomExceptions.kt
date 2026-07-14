@@ -161,3 +161,9 @@ class InvalidLineupException(message: String) : Exception(message) {
         return "InvalidLineupException: ${super.message}"
     }
 }
+
+class InvalidLineupTokenException(message: String) : Exception(message) {
+    override fun toString(): String {
+        return "InvalidLineupTokenException: ${super.message}"
+    }
+}

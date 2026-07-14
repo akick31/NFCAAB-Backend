@@ -26,9 +26,10 @@ class PlayerServiceTest {
         val team = "Team A"
         val uniformNumber = 10
         val player = Player().apply {
-            this.team = team
+            this.currentTeam = team
             this.uniformNumber = uniformNumber
-            name = "John Doe"
+            firstName = "John"
+            lastName = "Doe"
         }
 
         every { playerRepository.getPlayerByNumberAndTeam(team, uniformNumber) } returns player
@@ -59,6 +60,54 @@ class PlayerServiceTest {
             playerService.getPlayerByNumberAndTeam(team, uniformNumber)
         }
         verify { playerRepository.getPlayerByNumberAndTeam(team, uniformNumber) }
+    }
+
+    @Test
+    fun `rolloverEligibilityForNewSeason should advance non-senior players by one year`() {
+        val sophomore = Player().apply { collegeYear = Player.CollegeYear.SOPHOMORE }
+
+        every { playerRepository.findAll() } returns listOf(sophomore)
+        every { playerRepository.save(any()) } answers { firstArg() }
+
+        val graduated = playerService.rolloverEligibilityForNewSeason()
+
+        assertEquals(Player.CollegeYear.JUNIOR, sophomore.collegeYear)
+        assertEquals(true, sophomore.active)
+        assertEquals(emptyList<Player>(), graduated)
+    }
+
+    @Test
+    fun `rolloverEligibilityForNewSeason should graduate and deactivate seniors`() {
+        val senior = Player().apply {
+            collegeYear = Player.CollegeYear.SENIOR
+            currentTeam = "Team A"
+        }
+
+        every { playerRepository.findAll() } returns listOf(senior)
+        every { playerRepository.save(any()) } answers { firstArg() }
+
+        val graduated = playerService.rolloverEligibilityForNewSeason()
+
+        assertEquals(Player.CollegeYear.GRADUATED, senior.collegeYear)
+        assertEquals(false, senior.active)
+        assertEquals(null, senior.currentTeam)
+        assertEquals(listOf(senior), graduated)
+    }
+
+    @Test
+    fun `rolloverEligibilityForNewSeason should skip inactive players`() {
+        val inactivePlayer = Player().apply {
+            collegeYear = Player.CollegeYear.JUNIOR
+            active = false
+        }
+
+        every { playerRepository.findAll() } returns listOf(inactivePlayer)
+
+        val graduated = playerService.rolloverEligibilityForNewSeason()
+
+        assertEquals(Player.CollegeYear.JUNIOR, inactivePlayer.collegeYear)
+        assertEquals(emptyList<Player>(), graduated)
+        verify(exactly = 0) { playerRepository.save(any()) }
     }
 }
 

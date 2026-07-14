@@ -2,9 +2,12 @@ package com.nfcaab.backend.model
 
 import com.nfcaab.backend.model.Game.Scenario
 import com.nfcaab.backend.model.AtBat.SubmissionType
-import com.nfcaab.backend.model.Player.Archetype
+import com.nfcaab.backend.model.Player.BatterArchetype
+import com.nfcaab.backend.model.Player.PitcherArchetype
 import javax.persistence.Column
 import javax.persistence.Entity
+import javax.persistence.EnumType
+import javax.persistence.Enumerated
 import javax.persistence.GeneratedValue
 import javax.persistence.GenerationType.IDENTITY
 import javax.persistence.Id
@@ -18,11 +21,13 @@ open class Ranges {
     @Column(name = "id", nullable = false)
     open var id: Int? = null
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "batter_archetype")
-    open var batterArchetype: Archetype? = null
+    open var batterArchetype: BatterArchetype? = null
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "pitcher_archetype")
-    open var pitcherArchetype: Archetype? = null
+    open var pitcherArchetype: PitcherArchetype? = null
 
     @Column(name = "submission_type")
     open var submissionType: SubmissionType? = null

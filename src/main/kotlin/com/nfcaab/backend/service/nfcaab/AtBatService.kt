@@ -17,7 +17,7 @@ import com.nfcaab.backend.model.Game.Scenario.TRIPLE
 import com.nfcaab.backend.model.AtBat
 import com.nfcaab.backend.model.AtBat.SubmissionType
 import com.nfcaab.backend.model.Player
-import com.nfcaab.backend.model.Player.Archetype
+import com.nfcaab.backend.model.Player.BatterArchetype
 import com.nfcaab.backend.dto.AtBatOutcome
 import com.nfcaab.backend.repositories.AtBatRepository
 import com.nfcaab.backend.util.EncryptionUtils
@@ -323,8 +323,8 @@ class AtBatService(
         )
         val resultInformation = rangesService.getResult(
             submissionType,
-            batter.archetype ?: Player.Archetype.NEUTRAL,
-            pitcher.archetype ?: Player.Archetype.NEUTRAL,
+            batter.batterArchetype ?: Player.BatterArchetype.NEUTRAL,
+            pitcher.pitcherArchetype ?: Player.PitcherArchetype.NEUTRAL,
             difference
         )
         var result = resultInformation.result ?: throw ResultNotFoundException()
@@ -573,7 +573,7 @@ class AtBatService(
                     runnerOnFirstAfter = runnerOnFirst
                 }
                 BaseCondition.SECOND -> {
-                    if (runnerOnSecond?.archetype == Archetype.SPEEDY) {
+                    if (runnerOnSecond?.batterArchetype == BatterArchetype.SPEEDY) {
                         runnerOnSecondAfter = null
                         runnerOnThirdAfter = runnerOnSecond
                         baseConditionAfter = BaseCondition.THIRD
@@ -594,7 +594,7 @@ class AtBatService(
                     }
                 }
                 BaseCondition.FIRST_SECOND -> {
-                    if (runnerOnSecond?.archetype == Archetype.SPEEDY) {
+                    if (runnerOnSecond?.batterArchetype == BatterArchetype.SPEEDY) {
                         runnerOnFirstAfter = runnerOnFirst
                         runnerOnSecondAfter = null
                         runnerOnThirdAfter = runnerOnSecond
@@ -619,7 +619,7 @@ class AtBatService(
                 }
                 BaseCondition.SECOND_THIRD -> {
                     actualResult = ActualResult.SACRIFICE_FLY
-                    if (runnerOnSecond?.archetype == Archetype.SPEEDY) {
+                    if (runnerOnSecond?.batterArchetype == BatterArchetype.SPEEDY) {
                         runnerOnSecondAfter = null
                         runnerOnThirdAfter = runnerOnSecond
                         baseConditionAfter = BaseCondition.THIRD
@@ -637,7 +637,7 @@ class AtBatService(
                 }
                 BaseCondition.BASED_LOADED -> {
                     actualResult = ActualResult.SACRIFICE_FLY
-                    if (runnerOnSecond?.archetype == Archetype.SPEEDY) {
+                    if (runnerOnSecond?.batterArchetype == BatterArchetype.SPEEDY) {
                         runnerOnFirstAfter = runnerOnFirst
                         runnerOnSecondAfter = null
                         runnerOnThirdAfter = runnerOnSecond
@@ -1293,11 +1293,6 @@ class AtBatService(
         batterNumberSubmission: Int,
         decryptedPitcherNumber: String,
     ): AtBat {
-        val difference = gameService.getDifference(batterNumberSubmission, decryptedPitcherNumber.toInt())
-        val resultInformation = rangesService.getBuntResult(difference)
-        var result = resultInformation.result ?: throw ResultNotFoundException()
-
-        // Similar to swing but with different outcomes
         return swing(atBat, game, submissionType, batterNumberSubmission, decryptedPitcherNumber)
     }
 
@@ -1312,7 +1307,19 @@ class AtBatService(
         decryptedPitcherNumber: String,
     ): AtBat {
         val difference = gameService.getDifference(batterNumberSubmission, decryptedPitcherNumber.toInt())
-        val resultInformation = rangesService.getStealResult(difference)
+        val runner = playerService.getPlayerByNumberAndTeam(
+            atBat.battingTeam ?: "",
+            atBat.batterUniformNumber,
+        )
+        val pitcher = playerService.getPlayerByNumberAndTeam(
+            atBat.pitchingTeam ?: "",
+            decryptedPitcherNumber.toIntOrNull(),
+        )
+        val resultInformation = rangesService.getStealResult(
+            runner.batterArchetype ?: Player.BatterArchetype.NEUTRAL,
+            pitcher.pitcherArchetype ?: Player.PitcherArchetype.NEUTRAL,
+            difference,
+        )
         var result = resultInformation.result ?: throw ResultNotFoundException()
 
         // Handle steal attempt logic

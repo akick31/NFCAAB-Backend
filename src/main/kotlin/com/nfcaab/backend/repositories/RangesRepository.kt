@@ -1,7 +1,8 @@
 package com.nfcaab.backend.repositories
 
 import com.nfcaab.backend.model.AtBat.SubmissionType
-import com.nfcaab.backend.model.Player.Archetype
+import com.nfcaab.backend.model.Player.BatterArchetype
+import com.nfcaab.backend.model.Player.PitcherArchetype
 import com.nfcaab.backend.model.Ranges
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.CrudRepository
@@ -17,8 +18,8 @@ interface RangesRepository : CrudRepository<Ranges?, Int?> {
     )
     fun getNormalResult(
         submissionType: SubmissionType?,
-        batterArchetype: Archetype?,
-        pitcherArchetype: Archetype?,
+        batterArchetype: BatterArchetype?,
+        pitcherArchetype: PitcherArchetype?,
         difference: String,
     ): Ranges?
 }

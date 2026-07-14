@@ -2,16 +2,18 @@ package com.nfcaab.backend.service.auth
 
 import com.nfcaab.backend.repositories.SessionRepository
 import io.jsonwebtoken.Jwts
-import io.jsonwebtoken.SignatureAlgorithm
+import io.jsonwebtoken.security.Keys
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
+import java.nio.charset.StandardCharsets
 import java.util.Date
 
 @Service
 class SessionService(
     private val sessionRepository: SessionRepository,
-    @Value("\${jwt.secret}") private val secretKey: String,
+    @Value("\${jwt.secret}") secretKey: String,
 ) {
+    private val signingKey = Keys.hmacShaKeyFor(secretKey.toByteArray(StandardCharsets.UTF_8))
     /**
      * Add a token to the blacklist to prevent it from being used again
      * @param token
@@ -44,7 +46,7 @@ class SessionService(
             .setSubject(userId.toString())
             .setIssuedAt(Date())
             .setExpiration(Date(System.currentTimeMillis() + 3600 * 1000))
-            .signWith(SignatureAlgorithm.HS256, secretKey)
+            .signWith(signingKey)
             .compact()
     }
 
@@ -54,7 +56,7 @@ class SessionService(
      */
     fun validateToken(token: String): Boolean {
         return try {
-            val claims = Jwts.parser().setSigningKey(secretKey).parseClaimsJws(token)
+            val claims = Jwts.parserBuilder().setSigningKey(signingKey).build().parseClaimsJws(token)
             !claims.body.expiration.before(Date())
         } catch (e: Exception) {
             false
@@ -66,7 +68,7 @@ class SessionService(
      * @param token
      */
     fun extractUserIdFromToken(token: String): Long {
-        val claims = Jwts.parser().setSigningKey(secretKey).parseClaimsJws(token)
+        val claims = Jwts.parserBuilder().setSigningKey(signingKey).build().parseClaimsJws(token)
         return claims.body.subject.toLong() // The subject contains the userId
     }
 
@@ -75,7 +77,7 @@ class SessionService(
      * @param token
      */
     private fun extractExpirationDateFromToken(token: String): Date {
-        val claims = Jwts.parser().setSigningKey(secretKey).parseClaimsJws(token)
+        val claims = Jwts.parserBuilder().setSigningKey(signingKey).build().parseClaimsJws(token)
         return claims.body.expiration // Extracts the expiration date from the token
     }
 }

@@ -1,7 +1,8 @@
 package com.nfcaab.backend.service.nfcaab
 
 import com.nfcaab.backend.model.AtBat.SubmissionType
-import com.nfcaab.backend.model.Player.Archetype
+import com.nfcaab.backend.model.Player.BatterArchetype
+import com.nfcaab.backend.model.Player.PitcherArchetype
 import com.nfcaab.backend.repositories.RangesRepository
 import com.nfcaab.backend.util.ResultNotFoundException
 import org.springframework.stereotype.Service
@@ -10,17 +11,10 @@ import org.springframework.stereotype.Service
 class RangesService(
     private val rangesRepository: RangesRepository,
 ) {
-    /**
-     * Get the result of a normal plate appearance
-     * @param submissionType
-     * @param batterArchetype
-     * @param pitcherArchetype
-     * @param difference
-     */
     fun getResult(
         submissionType: SubmissionType,
-        batterArchetype: Archetype,
-        pitcherArchetype: Archetype,
+        batterArchetype: BatterArchetype,
+        pitcherArchetype: PitcherArchetype,
         difference: Int,
     ) = rangesRepository.getNormalResult(
         submissionType,
@@ -29,25 +23,25 @@ class RangesService(
         difference.toString(),
     ) ?: throw ResultNotFoundException()
 
-    /**
-     * Get the result of a bunt
-     * @param difference
-     */
-    fun getBuntResult(difference: Int) = getResult(
+    fun getBuntResult(
+        batterArchetype: BatterArchetype,
+        pitcherArchetype: PitcherArchetype,
+        difference: Int,
+    ) = getResult(
         SubmissionType.BUNT,
-        Archetype.NEUTRAL, // Default archetype for bunt
-        Archetype.NEUTRAL,
+        batterArchetype,
+        pitcherArchetype,
         difference,
     )
 
-    /**
-     * Get the result of a steal attempt
-     * @param difference
-     */
-    fun getStealResult(difference: Int) = getResult(
+    fun getStealResult(
+        batterArchetype: BatterArchetype,
+        pitcherArchetype: PitcherArchetype,
+        difference: Int,
+    ) = getResult(
         SubmissionType.STEAL,
-        Archetype.SPEEDY, // Default archetype for steal
-        Archetype.NEUTRAL,
+        batterArchetype,
+        pitcherArchetype,
         difference,
     )
 }

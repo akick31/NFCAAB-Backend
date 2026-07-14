@@ -11,10 +11,8 @@ import org.springframework.stereotype.Service
 class EmailService(
     private val encryptionUtils: EncryptionUtils,
     private val mailSender: JavaMailSender,
+    @Value("\${website.url}") private val websiteUrl: String,
 ) {
-    @Value("\${website.url}")
-    private lateinit var websiteUrl: String
-
     /**
      * Send a verification email
      */

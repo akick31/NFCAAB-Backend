@@ -11,17 +11,11 @@ import javax.servlet.http.HttpServletResponse
 
 private const val API_KEY_HEADER = "X-NFCAAB-Api-Key"
 
-/**
- * Deliberately not a @Component: it's constructed directly by SecurityConfig
- * and wired in via addFilterBefore. Registering it as a bean as well would
- * make Spring Boot's auto FilterRegistrationBean run it a second time as a
- * generic servlet filter, alongside its run inside the security chain.
- */
 class JwtAuthenticationFilter(
     private val sessionService: SessionService,
     private val botApiKey: String,
 ) : OncePerRequestFilter() {
-    override fun doFilterInternal(
+    public override fun doFilterInternal(
         request: HttpServletRequest,
         response: HttpServletResponse,
         filterChain: FilterChain,

@@ -1,7 +1,8 @@
 package com.nfcaab.backend.service.nfcaab
 
 import com.nfcaab.backend.dto.GameScenario
-import com.nfcaab.backend.model.AtBat.ActualResult
+import com.nfcaab.backend.model.Game.ActualResult
+import com.nfcaab.backend.model.Game.InningHalf
 import com.nfcaab.backend.model.GameWriteup
 import com.nfcaab.backend.repositories.GameWriteupRepository
 import io.mockk.every
@@ -28,7 +29,10 @@ class GameWriteupServiceTest {
             batterOnFirst = true,
             batterOnSecond = false,
             batterOnThird = false,
-            runsScored = 0
+            runsScored = 0,
+            inning = 1,
+            inningHalf = InningHalf.TOP,
+            outs = 0,
         )
         val writeups = listOf(
             GameWriteup().apply {
@@ -70,7 +74,10 @@ class GameWriteupServiceTest {
             batterOnFirst = false,
             batterOnSecond = false,
             batterOnThird = false,
-            runsScored = 0
+            runsScored = 0,
+            inning = 1,
+            inningHalf = InningHalf.TOP,
+            outs = 0,
         )
 
         every {

@@ -13,6 +13,7 @@ import java.time.format.DateTimeFormatter
 @Component
 class SeasonService(
     private val seasonRepository: SeasonRepository,
+    private val playerService: PlayerService,
 ) {
     /**
      * Start the current season
@@ -32,6 +33,10 @@ class SeasonService(
                 currentSeason = true,
             )
         seasonRepository.save(season)
+
+        if (previousSeason != null) {
+            playerService.rolloverEligibilityForNewSeason()
+        }
     }
 
     /**

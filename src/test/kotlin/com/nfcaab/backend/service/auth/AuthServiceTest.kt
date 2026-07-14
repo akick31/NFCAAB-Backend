@@ -64,7 +64,7 @@ class AuthServiceTest {
         val password = "password123"
         val encodedPassword = "encodedPassword"
         val token = "abc123"
-        val userRole = com.nfcaab.backend.enums.user.UserRole.USER
+        val userRole = User.Role.USER
 
         val testUser = User().apply {
             id = 1
@@ -81,7 +81,7 @@ class AuthServiceTest {
 
         assertEquals(LoginResponse(token, testUser.id, userRole), result)
         verify { passwordEncoder.matches(password, encodedPassword) }
-        verify { sessionService.generateToken(user.id) }
+        verify { sessionService.generateToken(testUser.id) }
     }
 
     @Test

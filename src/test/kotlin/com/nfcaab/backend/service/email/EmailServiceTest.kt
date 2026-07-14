@@ -6,6 +6,7 @@ import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.springframework.mail.SimpleMailMessage
 import org.springframework.mail.javamail.JavaMailSender
 
 class EmailServiceTest {
@@ -17,7 +18,7 @@ class EmailServiceTest {
     fun setUp() {
         encryptionUtils = mockk()
         mailSender = mockk(relaxed = true)
-        emailService = EmailService(encryptionUtils, mailSender)
+        emailService = EmailService(encryptionUtils, mailSender, "https://fakecollegebaseball.com")
     }
 
     @Test
@@ -28,12 +29,12 @@ class EmailServiceTest {
         val decryptedEmail = "test@example.com"
 
         every { encryptionUtils.decrypt(email) } returns decryptedEmail
-        every { mailSender.send(any()) } returns Unit
+        every { mailSender.send(any<SimpleMailMessage>()) } returns Unit
 
         emailService.sendVerificationEmail(email, userId, verificationToken)
 
         verify { encryptionUtils.decrypt(email) }
-        verify { mailSender.send(any()) }
+        verify { mailSender.send(any<SimpleMailMessage>()) }
     }
 
     @Test
@@ -44,12 +45,12 @@ class EmailServiceTest {
         val decryptedEmail = "test@example.com"
 
         every { encryptionUtils.decrypt(email) } returns decryptedEmail
-        every { mailSender.send(any()) } returns Unit
+        every { mailSender.send(any<SimpleMailMessage>()) } returns Unit
 
         emailService.sendPasswordResetEmail(email, userId, resetToken)
 
         verify { encryptionUtils.decrypt(email) }
-        verify { mailSender.send(any()) }
+        verify { mailSender.send(any<SimpleMailMessage>()) }
     }
 }
 

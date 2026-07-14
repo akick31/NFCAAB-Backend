@@ -33,7 +33,9 @@ class TeamServiceTest {
             name = "Team A"
         }
 
-        every { teamRepository.findById(id) } returns java.util.Optional.of<Team?>(team)
+        @Suppress("UNCHECKED_CAST")
+        val optionalTeam = java.util.Optional.of(team) as java.util.Optional<Team?>
+        every { teamRepository.findById(id) } returns optionalTeam
 
         val result = teamService.getTeamById(id)
 

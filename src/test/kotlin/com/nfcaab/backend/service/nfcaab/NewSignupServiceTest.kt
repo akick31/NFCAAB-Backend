@@ -70,7 +70,7 @@ class NewSignupServiceTest {
     fun `createNewSignup should throw exception when email is null`() {
         val newSignup = NewSignup().apply {
             username = "testuser"
-            email = null
+            email = ""
             password = "password123"
         }
 
@@ -174,8 +174,8 @@ class NewSignupServiceTest {
             NewSignup().apply { username = "user1" },
             NewSignup().apply { username = "user2" }
         )
-        val dto1 = com.nfcaab.backend.dto.website.NewSignupDTO()
-        val dto2 = com.nfcaab.backend.dto.website.NewSignupDTO()
+        val dto1 = mockk<com.nfcaab.backend.dto.website.NewSignupDTO>()
+        val dto2 = mockk<com.nfcaab.backend.dto.website.NewSignupDTO>()
 
         every { newSignupRepository.getNewSignups() } returns signups
         every { dtoConverter.convertToNewSignupDTO(signups[0]) } returns dto1

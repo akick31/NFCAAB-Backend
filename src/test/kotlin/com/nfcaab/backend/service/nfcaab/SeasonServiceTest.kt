@@ -11,12 +11,14 @@ import org.junit.jupiter.api.Test
 
 class SeasonServiceTest {
     private lateinit var seasonRepository: SeasonRepository
+    private lateinit var playerService: PlayerService
     private lateinit var seasonService: SeasonService
 
     @BeforeEach
     fun setUp() {
         seasonRepository = mockk()
-        seasonService = SeasonService(seasonRepository)
+        playerService = mockk()
+        seasonService = SeasonService(seasonRepository, playerService)
     }
 
     @Test
@@ -28,6 +30,18 @@ class SeasonServiceTest {
 
         verify { seasonRepository.getPreviousSeason() }
         verify { seasonRepository.save(any()) }
+    }
+
+    @Test
+    fun `startSeason should roll over player eligibility when a previous season exists`() {
+        val previousSeason = Season().apply { seasonNumber = 2024 }
+        every { seasonRepository.getPreviousSeason() } returns previousSeason
+        every { seasonRepository.save(any()) } returns mockk<Season>()
+        every { playerService.rolloverEligibilityForNewSeason() } returns emptyList()
+
+        seasonService.startSeason()
+
+        verify { playerService.rolloverEligibilityForNewSeason() }
     }
 
     @Test

@@ -1,6 +1,7 @@
 package com.nfcaab.backend.service.nfcaab
 
 import com.nfcaab.backend.model.Schedule
+import com.nfcaab.backend.model.Season
 import com.nfcaab.backend.repositories.ScheduleRepository
 import io.mockk.every
 import io.mockk.mockk
@@ -18,28 +19,23 @@ class ScheduleServiceTest {
     fun setUp() {
         scheduleRepository = mockk()
         seasonService = mockk()
-        scheduleService = ScheduleService(scheduleRepository, seasonService)
+        scheduleService = ScheduleService(seasonService, scheduleRepository)
     }
 
     @Test
     fun `getTeamOpponent should return opponent team name`() {
         val team = "Team A"
         val expectedOpponent = "Team B"
+        val season = Season().apply { seasonNumber = 2024 }
 
-        every { seasonService.getCurrentSeason() } returns 2024
+        every { seasonService.getCurrentSeason() } returns season
         every { seasonService.getCurrentWeek() } returns 1
-        every { scheduleRepository.findBySeasonAndWeekAndHomeTeam(2024, 1, team) } returns
-            Schedule().apply {
-                this.season = 2024
-                this.week = 1
-                this.homeTeam = team
-                this.awayTeam = expectedOpponent
-            }
+        every { scheduleRepository.getTeamOpponent(2024, 1, team) } returns expectedOpponent
 
         val result = scheduleService.getTeamOpponent(team)
 
         assertEquals(expectedOpponent, result)
-        verify { scheduleRepository.findBySeasonAndWeekAndHomeTeam(2024, 1, team) }
+        verify { scheduleRepository.getTeamOpponent(2024, 1, team) }
     }
 
     @Test
@@ -52,12 +48,12 @@ class ScheduleServiceTest {
             this.awayTeam = "Team B"
         }
 
-        every { scheduleRepository.findBySeasonAndHomeTeam(season, team) } returns listOf(schedule)
+        every { scheduleRepository.getScheduleBySeasonAndTeam(season, team) } returns listOf(schedule)
 
         val result = scheduleService.getScheduleBySeasonAndTeam(season, team)
 
-        assertEquals(schedule, result)
-        verify { scheduleRepository.findBySeasonAndHomeTeam(season, team) }
+        assertEquals(listOf(schedule), result)
+        verify { scheduleRepository.getScheduleBySeasonAndTeam(season, team) }
     }
 }
 

@@ -3,6 +3,7 @@ package com.nfcaab.backend.service.discord
 import com.nfcaab.backend.model.Game
 import com.nfcaab.backend.util.ServerUtils
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -42,7 +43,9 @@ class DiscordServiceTest {
 
         assert(result != null)
         assert(result?.size == 2)
-        verify { serverUtils.retryWithExponentialBackoff(any()) }
+        coVerify {
+            serverUtils.retryWithExponentialBackoff<ResponseEntity<String>>(any(), any(), any(), any(), any())
+        }
     }
 
     @Test

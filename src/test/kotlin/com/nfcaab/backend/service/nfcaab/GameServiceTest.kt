@@ -24,6 +24,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.data.domain.PageImpl
 import org.springframework.data.domain.Pageable
+import org.springframework.data.jpa.domain.Specification
 
 class GameServiceTest {
     private lateinit var gameRepository: GameRepository
@@ -83,32 +84,32 @@ class GameServiceTest {
         val player3 = Player().apply { uniformNumber = 3 }
 
         val condition1 = gameService.getBaseCondition(null, null, null)
-        assertEquals(BaseCondition.BASES_EMPTY, condition1)
+        assertEquals(BaseCondition.EMPTY, condition1)
 
         val condition2 = gameService.getBaseCondition(player1, null, null)
-        assertEquals(BaseCondition.RUNNER_ON_FIRST, condition2)
+        assertEquals(BaseCondition.FIRST, condition2)
 
         val condition3 = gameService.getBaseCondition(null, player2, null)
-        assertEquals(BaseCondition.RUNNER_ON_SECOND, condition3)
+        assertEquals(BaseCondition.SECOND, condition3)
 
         val condition4 = gameService.getBaseCondition(null, null, player3)
-        assertEquals(BaseCondition.RUNNER_ON_THIRD, condition4)
+        assertEquals(BaseCondition.THIRD, condition4)
 
         val condition5 = gameService.getBaseCondition(player1, player2, null)
-        assertEquals(BaseCondition.RUNNERS_ON_FIRST_AND_SECOND, condition5)
+        assertEquals(BaseCondition.FIRST_SECOND, condition5)
 
         val condition6 = gameService.getBaseCondition(player1, null, player3)
-        assertEquals(BaseCondition.RUNNERS_ON_FIRST_AND_THIRD, condition6)
+        assertEquals(BaseCondition.FIRST_THIRD, condition6)
 
         val condition7 = gameService.getBaseCondition(null, player2, player3)
-        assertEquals(BaseCondition.RUNNERS_ON_SECOND_AND_THIRD, condition7)
+        assertEquals(BaseCondition.SECOND_THIRD, condition7)
 
         val condition8 = gameService.getBaseCondition(player1, player2, player3)
-        assertEquals(BaseCondition.BASES_LOADED, condition8)
+        assertEquals(BaseCondition.BASED_LOADED, condition8)
     }
 
     @Test
-    fun `getGameByGameId should return game when found`() {
+    fun `getGameById should return game when found`() {
         val gameId = 1
         val game = Game().apply {
             id = gameId
@@ -116,21 +117,20 @@ class GameServiceTest {
             awayTeam = "Away Team"
         }
 
-        every { gameRepository.getGameByGameId(gameId) } returns game
+        every { gameRepository.getGameById(gameId) } returns game
 
-        val result = gameService.getGameByGameId(gameId)
+        val result = gameService.getGameById(gameId)
 
         assertEquals(game, result)
-        verify { gameRepository.getGameByGameId(gameId) }
+        verify { gameRepository.getGameById(gameId) }
     }
 
     @Test
     fun `getGameByRequestMessageId should return game when found`() {
         val requestMessageId = "123456"
-        val game = Game().apply {
-            id = 1
-            requestMessageId = requestMessageId
-        }
+        val game = Game()
+        game.id = 1
+        game.requestMessageId = requestMessageId
 
         every { gameRepository.getGameByRequestMessageId(requestMessageId) } returns game
 
@@ -138,22 +138,6 @@ class GameServiceTest {
 
         assertEquals(game, result)
         verify { gameRepository.getGameByRequestMessageId(requestMessageId) }
-    }
-
-    @Test
-    fun `getGameByChannelId should return game when found`() {
-        val channelId = "123456"
-        val game = Game().apply {
-            id = 1
-            gameThreadId = channelId
-        }
-
-        every { gameRepository.getGameByChannelId(channelId) } returns game
-
-        val result = gameService.getGameByChannelId(channelId)
-
-        assertEquals(game, result)
-        verify { gameRepository.getGameByChannelId(channelId) }
     }
 
     @Test
@@ -244,14 +228,18 @@ class GameServiceTest {
         val games = listOf(Game().apply { id = 1 })
         val page = PageImpl(games)
 
-        every { gameSpecificationService.createSpecification(any(), any(), any(), any(), any()) } returns mockk()
+        every { pageable.pageNumber } returns 0
+        every { pageable.pageSize } returns 25
+        every {
+            gameSpecificationService.createSpecification(any(), any(), any(), any(), any())
+        } returns mockk<Specification<Game>>()
         every { gameSpecificationService.createSort(any()) } returns emptyList()
-        every { gameRepository.findAll(any(), any()) } returns page
+        every { gameRepository.findAll(any<Specification<Game>>(), any<Pageable>()) } returns page
 
         val result = gameService.getFilteredGames(filters, category, conference, season, week, sort, pageable)
 
         assertEquals(page, result)
-        verify { gameRepository.findAll(any(), any()) }
+        verify { gameRepository.findAll(any<Specification<Game>>(), any<Pageable>()) }
     }
 
     @Test
