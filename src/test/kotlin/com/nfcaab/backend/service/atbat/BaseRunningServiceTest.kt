@@ -2,6 +2,7 @@ package com.nfcaab.backend.service.atbat
 
 import com.nfcaab.backend.model.Game.ActualResult
 import com.nfcaab.backend.model.Game.BaseCondition
+import com.nfcaab.backend.model.Game.HitDirection
 import com.nfcaab.backend.model.Game.InningHalf
 import com.nfcaab.backend.model.Game.Scenario
 import com.nfcaab.backend.model.Player
@@ -35,6 +36,7 @@ class BaseRunningServiceTest {
                 null,
                 0,
                 0,
+                null,
             )
 
         assertEquals(ActualResult.STRIKEOUT, outcome.actualResult)
@@ -56,6 +58,7 @@ class BaseRunningServiceTest {
                 Player(),
                 3,
                 2,
+                null,
             )
 
         assertEquals(ActualResult.HOME_RUN, outcome.actualResult)
@@ -79,6 +82,7 @@ class BaseRunningServiceTest {
                 null,
                 0,
                 0,
+                null,
             )
 
         assertEquals(BaseCondition.THIRD, outcome.baseConditionAfter)
@@ -101,6 +105,7 @@ class BaseRunningServiceTest {
                 null,
                 0,
                 0,
+                null,
             )
 
         assertEquals(BaseCondition.SECOND, outcome.baseConditionAfter)
@@ -126,5 +131,213 @@ class BaseRunningServiceTest {
         val result = runningService.resolveSteal(Player.BatterArchetype.SPEEDY, Player.PitcherArchetype.NEUTRAL, 5)
 
         assertEquals(Scenario.STEAL_SUCCESS, result)
+    }
+
+    @Test
+    fun `resolveOutcome for a single to left holds a runner on second at third regardless of archetype`() {
+        val speedyRunner = Player().apply { batterArchetype = Player.BatterArchetype.SPEEDY }
+
+        val outcome =
+            baseRunningService.resolveOutcome(
+                Scenario.SINGLE,
+                0,
+                InningHalf.TOP,
+                BaseCondition.SECOND,
+                null,
+                speedyRunner,
+                null,
+                0,
+                0,
+                HitDirection.LEFT,
+            )
+
+        assertEquals(BaseCondition.FIRST_THIRD, outcome.baseConditionAfter)
+        assertEquals(0, outcome.runsScored)
+        assertEquals(speedyRunner, outcome.runnerOnThirdAfter)
+    }
+
+    @Test
+    fun `resolveOutcome for a single to right scores a runner from second regardless of archetype`() {
+        val neutralRunner = Player().apply { batterArchetype = Player.BatterArchetype.NEUTRAL }
+
+        val outcome =
+            baseRunningService.resolveOutcome(
+                Scenario.SINGLE,
+                0,
+                InningHalf.TOP,
+                BaseCondition.SECOND,
+                null,
+                neutralRunner,
+                null,
+                0,
+                0,
+                HitDirection.RIGHT,
+            )
+
+        assertEquals(BaseCondition.FIRST, outcome.baseConditionAfter)
+        assertEquals(1, outcome.runsScored)
+        assertEquals(null, outcome.runnerOnThirdAfter)
+    }
+
+    @Test
+    fun `resolveOutcome for a single up the middle scores a speedy runner from second`() {
+        val speedyRunner = Player().apply { batterArchetype = Player.BatterArchetype.SPEEDY }
+
+        val outcome =
+            baseRunningService.resolveOutcome(
+                Scenario.SINGLE,
+                0,
+                InningHalf.TOP,
+                BaseCondition.SECOND,
+                null,
+                speedyRunner,
+                null,
+                0,
+                0,
+                HitDirection.CENTER,
+            )
+
+        assertEquals(1, outcome.runsScored)
+        assertEquals(BaseCondition.FIRST, outcome.baseConditionAfter)
+    }
+
+    @Test
+    fun `resolveOutcome for a single up the middle holds a non-speedy runner with fewer than two outs`() {
+        val neutralRunner = Player().apply { batterArchetype = Player.BatterArchetype.NEUTRAL }
+
+        val outcome =
+            baseRunningService.resolveOutcome(
+                Scenario.SINGLE,
+                0,
+                InningHalf.TOP,
+                BaseCondition.SECOND,
+                null,
+                neutralRunner,
+                null,
+                0,
+                0,
+                HitDirection.CENTER,
+            )
+
+        assertEquals(0, outcome.runsScored)
+        assertEquals(BaseCondition.FIRST_THIRD, outcome.baseConditionAfter)
+    }
+
+    @Test
+    fun `resolveOutcome for a single up the middle sends a non-speedy runner with two outs`() {
+        val neutralRunner = Player().apply { batterArchetype = Player.BatterArchetype.NEUTRAL }
+
+        val outcome =
+            baseRunningService.resolveOutcome(
+                Scenario.SINGLE,
+                2,
+                InningHalf.TOP,
+                BaseCondition.SECOND,
+                null,
+                neutralRunner,
+                null,
+                0,
+                0,
+                HitDirection.CENTER,
+            )
+
+        assertEquals(1, outcome.runsScored)
+        assertEquals(BaseCondition.FIRST, outcome.baseConditionAfter)
+    }
+
+    @Test
+    fun `resolveOutcome for a double to left holds a runner on first at third`() {
+        val neutralRunner = Player().apply { batterArchetype = Player.BatterArchetype.NEUTRAL }
+
+        val outcome =
+            baseRunningService.resolveOutcome(
+                Scenario.DOUBLE,
+                0,
+                InningHalf.TOP,
+                BaseCondition.FIRST,
+                neutralRunner,
+                null,
+                null,
+                0,
+                0,
+                HitDirection.LEFT,
+            )
+
+        assertEquals(0, outcome.runsScored)
+        assertEquals(BaseCondition.SECOND_THIRD, outcome.baseConditionAfter)
+        assertEquals(neutralRunner, outcome.runnerOnThirdAfter)
+    }
+
+    @Test
+    fun `resolveOutcome for a double to right scores a runner from first`() {
+        val neutralRunner = Player().apply { batterArchetype = Player.BatterArchetype.NEUTRAL }
+
+        val outcome =
+            baseRunningService.resolveOutcome(
+                Scenario.DOUBLE,
+                0,
+                InningHalf.TOP,
+                BaseCondition.FIRST,
+                neutralRunner,
+                null,
+                null,
+                0,
+                0,
+                HitDirection.RIGHT,
+            )
+
+        assertEquals(1, outcome.runsScored)
+        assertEquals(BaseCondition.SECOND, outcome.baseConditionAfter)
+        assertEquals(null, outcome.runnerOnThirdAfter)
+    }
+
+    @Test
+    fun `resolveOutcome for a double with runners on first and third to left only scores the runner from third`() {
+        val runnerOnFirst = Player().apply { batterArchetype = Player.BatterArchetype.NEUTRAL }
+        val runnerOnThird = Player().apply { batterArchetype = Player.BatterArchetype.NEUTRAL }
+
+        val outcome =
+            baseRunningService.resolveOutcome(
+                Scenario.DOUBLE,
+                0,
+                InningHalf.TOP,
+                BaseCondition.FIRST_THIRD,
+                runnerOnFirst,
+                null,
+                runnerOnThird,
+                0,
+                0,
+                HitDirection.LEFT,
+            )
+
+        assertEquals(1, outcome.runsScored)
+        assertEquals(1, outcome.awayScore)
+        assertEquals(BaseCondition.SECOND_THIRD, outcome.baseConditionAfter)
+        assertEquals(runnerOnFirst, outcome.runnerOnThirdAfter)
+    }
+
+    @Test
+    fun `resolveOutcome for a double with runners on first and third to right scores both runners`() {
+        val runnerOnFirst = Player().apply { batterArchetype = Player.BatterArchetype.NEUTRAL }
+        val runnerOnThird = Player().apply { batterArchetype = Player.BatterArchetype.NEUTRAL }
+
+        val outcome =
+            baseRunningService.resolveOutcome(
+                Scenario.DOUBLE,
+                0,
+                InningHalf.TOP,
+                BaseCondition.FIRST_THIRD,
+                runnerOnFirst,
+                null,
+                runnerOnThird,
+                0,
+                0,
+                HitDirection.RIGHT,
+            )
+
+        assertEquals(2, outcome.runsScored)
+        assertEquals(2, outcome.awayScore)
+        assertEquals(BaseCondition.SECOND, outcome.baseConditionAfter)
+        assertEquals(null, outcome.runnerOnThirdAfter)
     }
 }

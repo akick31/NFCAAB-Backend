@@ -32,6 +32,7 @@ class AtBatResolutionServiceTest {
     private lateinit var scorebugService: ScorebugService
     private lateinit var playerService: PlayerService
     private lateinit var baseRunningService: BaseRunningService
+    private lateinit var hitLocationService: HitLocationService
     private lateinit var atBatResolutionService: AtBatResolutionService
 
     @BeforeEach
@@ -45,6 +46,7 @@ class AtBatResolutionServiceTest {
         scorebugService = mockk()
         playerService = mockk()
         baseRunningService = mockk()
+        hitLocationService = mockk()
         atBatResolutionService =
             AtBatResolutionService(
                 atBatRepository,
@@ -56,6 +58,7 @@ class AtBatResolutionServiceTest {
                 scorebugService,
                 playerService,
                 baseRunningService,
+                hitLocationService,
             )
     }
 
@@ -110,7 +113,21 @@ class AtBatResolutionServiceTest {
         } returns rangeResult
         every { gameService.getBaseCondition(null, null, null) } returns Game.BaseCondition.EMPTY
         every {
-            baseRunningService.resolveOutcome(Game.Scenario.STRIKEOUT, 0, Game.InningHalf.TOP, Game.BaseCondition.EMPTY, null, null, null, 0, 0)
+            hitLocationService.determine(Game.Scenario.STRIKEOUT, Player.BatterArchetype.NEUTRAL, 55, 5)
+        } returns HitLocation(null, null, null)
+        every {
+            baseRunningService.resolveOutcome(
+                Game.Scenario.STRIKEOUT,
+                0,
+                Game.InningHalf.TOP,
+                Game.BaseCondition.EMPTY,
+                null,
+                null,
+                null,
+                0,
+                0,
+                null,
+            )
         } returns outcome
         every { gameLifecycleService.updateGameValues(game, outcome) } returns game
         every { scorebugService.generateScorebug(game) } returns mockk()

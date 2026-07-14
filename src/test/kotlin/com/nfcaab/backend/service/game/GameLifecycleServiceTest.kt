@@ -192,6 +192,73 @@ class GameLifecycleServiceTest {
     }
 
     @Test
+    fun `updateGameValues should end the game after the top of the ninth when the home team is already leading`() {
+        val game = scrimmageGame().apply { inningHalf = TOP; inning = 9; outs = 2; homeBatterLineupSpot = 1; awayBatterLineupSpot = 9 }
+        val batter = Player().apply { firstName = "First"; lastName = "Last"; uniformNumber = 12 }
+        val pitcher = Player().apply { firstName = "Pitch"; lastName = "Er"; uniformNumber = 21 }
+        val outcome =
+            AtBatOutcome(
+                actualResult = ActualResult.GROUNDOUT,
+                outs = 3,
+                runsScored = 0,
+                homeScore = 5,
+                awayScore = 2,
+                runnerOnFirstAfter = null,
+                runnerOnSecondAfter = null,
+                runnerOnThirdAfter = null,
+                baseConditionAfter = Game.BaseCondition.EMPTY,
+            )
+
+        every { lineupService.getBatterByLineupSpot(any(), any(), any()) } returns batter
+        every { lineupService.getPitcherByTeam(any(), any()) } returns pitcher
+        every { teamService.getTeamByName(any()) } returns Team().apply { name = "Home Team"; ranking = 1 }
+        every { gameService.calculateDelayOfGameTimer() } returns "07/13/2026 12:00:00"
+        every { gameService.saveGame(any()) } returns game
+        every { gameStatsService.deleteByGameId(any()) } returns Unit
+        every { atBatRepository.getAllAtBatsByGameId(any()) } returns emptyList()
+        every { gameStatsService.updateGameStats(any(), any()) } returns emptyList()
+        every { gameStatsService.getGameStatsByIdAndTeam(any(), any()) } returns mockk(relaxed = true)
+        every { gameStatsService.saveGameStats(any()) } returns mockk()
+
+        val result = gameLifecycleService.updateGameValues(game, outcome)
+
+        assertEquals(GameStatus.FINAL, result.gameStatus)
+        assertEquals(9, result.inning)
+        assertEquals(Game.InningHalf.BOTTOM, result.inningHalf)
+        verify(exactly = 0) { gameStatsService.aggregateStatsAfterGame(any()) }
+    }
+
+    @Test
+    fun `updateGameValues should still play the bottom of the ninth when the home team is not leading`() {
+        val game = scrimmageGame().apply { inningHalf = TOP; inning = 9; outs = 2; homeBatterLineupSpot = 1; awayBatterLineupSpot = 9 }
+        val batter = Player().apply { firstName = "First"; lastName = "Last"; uniformNumber = 12 }
+        val pitcher = Player().apply { firstName = "Pitch"; lastName = "Er"; uniformNumber = 21 }
+        val outcome =
+            AtBatOutcome(
+                actualResult = ActualResult.GROUNDOUT,
+                outs = 3,
+                runsScored = 0,
+                homeScore = 2,
+                awayScore = 2,
+                runnerOnFirstAfter = null,
+                runnerOnSecondAfter = null,
+                runnerOnThirdAfter = null,
+                baseConditionAfter = Game.BaseCondition.EMPTY,
+            )
+
+        every { lineupService.getBatterByLineupSpot(any(), any(), any()) } returns batter
+        every { lineupService.getPitcherByTeam(any(), any()) } returns pitcher
+        every { teamService.getTeamByName(any()) } returns Team().apply { name = "Home Team"; ranking = 1 }
+        every { gameService.calculateDelayOfGameTimer() } returns "07/13/2026 12:00:00"
+
+        val result = gameLifecycleService.updateGameValues(game, outcome)
+
+        assertEquals(GameStatus.IN_PROGRESS, result.gameStatus)
+        assertEquals(9, result.inning)
+        assertEquals(Game.InningHalf.BOTTOM, result.inningHalf)
+    }
+
+    @Test
     fun `updateWithPitcherNumberSubmission should set the current at bat and flip waitingOn`() {
         val game = scrimmageGame().apply { inningHalf = TOP }
         val atBat = AtBat().apply { id = 42; gameId = game.id }

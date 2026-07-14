@@ -182,7 +182,9 @@ class GameLifecycleService(
             val inningHalf = if (game.inningHalf == TOP) BOTTOM else TOP
             val inning = game.inning + if (inningHalf == TOP) 1 else 0
 
-            if (inning > 9 && inningHalf == TOP) {
+            if (game.inning >= 9 && inningHalf == BOTTOM && outcome.homeScore > outcome.awayScore) {
+                game.gameStatus = GameStatus.FINAL
+            } else if (inning > 9 && inningHalf == TOP) {
                 if (outcome.homeScore > outcome.awayScore || outcome.awayScore > outcome.homeScore) {
                     game.gameStatus = GameStatus.FINAL
                 } else {

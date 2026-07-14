@@ -3,6 +3,7 @@ package com.nfcaab.backend.service.atbat
 import com.nfcaab.backend.dto.AtBatOutcome
 import com.nfcaab.backend.model.Game.ActualResult
 import com.nfcaab.backend.model.Game.BaseCondition
+import com.nfcaab.backend.model.Game.HitDirection
 import com.nfcaab.backend.model.Game.InningHalf
 import com.nfcaab.backend.model.Game.InningHalf.TOP
 import com.nfcaab.backend.model.Game.Scenario
@@ -34,6 +35,7 @@ class BaseRunningService(
         runnerOnThird: Player?,
         homeScore: Int,
         awayScore: Int,
+        hitDirection: HitDirection?,
     ): AtBatOutcome =
         when (result) {
             STRIKEOUT ->
@@ -47,9 +49,9 @@ class BaseRunningService(
             RIGHT_GROUNDOUT ->
                 handleRightGroundout(outs, inningHalf, baseConditionBefore, runnerOnFirst, runnerOnSecond, runnerOnThird, homeScore, awayScore)
             SINGLE ->
-                handleSingle(outs, inningHalf, baseConditionBefore, runnerOnFirst, runnerOnSecond, runnerOnThird, homeScore, awayScore)
+                handleSingle(outs, inningHalf, baseConditionBefore, runnerOnFirst, runnerOnSecond, runnerOnThird, homeScore, awayScore, hitDirection)
             DOUBLE ->
-                handleDouble(outs, inningHalf, baseConditionBefore, runnerOnFirst, runnerOnSecond, runnerOnThird, homeScore, awayScore)
+                handleDouble(outs, inningHalf, baseConditionBefore, runnerOnFirst, runnerOnSecond, runnerOnThird, homeScore, awayScore, hitDirection)
             TRIPLE ->
                 handleTriple(outs, inningHalf, baseConditionBefore, runnerOnFirst, runnerOnSecond, runnerOnThird, homeScore, awayScore)
             HOME_RUN ->
@@ -64,6 +66,20 @@ class BaseRunningService(
     ): Scenario =
         rangesService.getStealResult(runnerArchetype, pitcherArchetype, difference).result
             ?: throw ResultNotFoundException()
+
+    private fun runnerTakesExtraBase(
+        direction: HitDirection?,
+        runner: Player?,
+        outs: Int,
+    ): Boolean {
+        if (direction == null) return false
+        val aggressive = runner?.batterArchetype == BatterArchetype.SPEEDY || outs == 2
+        return when (direction) {
+            HitDirection.LEFT -> false
+            HitDirection.LEFT_CENTER, HitDirection.CENTER, HitDirection.RIGHT_CENTER -> aggressive
+            HitDirection.RIGHT -> true
+        }
+    }
 
     private fun handleStrikeout(
         outs: Int,
@@ -487,6 +503,7 @@ class BaseRunningService(
         runnerOnThird: Player?,
         homeScore: Int,
         awayScore: Int,
+        direction: HitDirection?,
     ): AtBatOutcome {
         val actualResult = ActualResult.SINGLE
         var runsScored = 0
@@ -512,9 +529,17 @@ class BaseRunningService(
             }
             BaseCondition.SECOND -> {
                 runnerOnFirstAfter = null
-                runnerOnSecondAfter = null
-                runnerOnThirdAfter = runnerOnSecond
-                baseConditionAfter = BaseCondition.FIRST_THIRD
+                if (runnerTakesExtraBase(direction, runnerOnSecond, outs)) {
+                    runnerOnSecondAfter = null
+                    runnerOnThirdAfter = null
+                    baseConditionAfter = BaseCondition.FIRST
+                    runsScored = 1
+                    if (inningHalf == TOP) updatedAwayScore += 1 else updatedHomeScore += 1
+                } else {
+                    runnerOnSecondAfter = null
+                    runnerOnThirdAfter = runnerOnSecond
+                    baseConditionAfter = BaseCondition.FIRST_THIRD
+                }
             }
             BaseCondition.THIRD -> {
                 runnerOnFirstAfter = null
@@ -530,9 +555,17 @@ class BaseRunningService(
             }
             BaseCondition.FIRST_SECOND -> {
                 runnerOnFirstAfter = null
-                runnerOnSecondAfter = runnerOnFirst
-                runnerOnThirdAfter = runnerOnSecond
-                baseConditionAfter = BaseCondition.BASED_LOADED
+                if (runnerTakesExtraBase(direction, runnerOnSecond, outs)) {
+                    runnerOnSecondAfter = runnerOnFirst
+                    runnerOnThirdAfter = null
+                    baseConditionAfter = BaseCondition.FIRST_SECOND
+                    runsScored = 1
+                    if (inningHalf == TOP) updatedAwayScore += 1 else updatedHomeScore += 1
+                } else {
+                    runnerOnSecondAfter = runnerOnFirst
+                    runnerOnThirdAfter = runnerOnSecond
+                    baseConditionAfter = BaseCondition.BASED_LOADED
+                }
             }
             BaseCondition.FIRST_THIRD -> {
                 runnerOnFirstAfter = null
@@ -548,26 +581,32 @@ class BaseRunningService(
             }
             BaseCondition.SECOND_THIRD -> {
                 runnerOnFirstAfter = null
-                runnerOnSecondAfter = null
-                runnerOnThirdAfter = runnerOnSecond
-                baseConditionAfter = BaseCondition.FIRST_THIRD
-                runsScored = 1
-                if (inningHalf == TOP) {
-                    updatedAwayScore += 1
+                val extra = runnerTakesExtraBase(direction, runnerOnSecond, outs)
+                runsScored = if (extra) 2 else 1
+                if (inningHalf == TOP) updatedAwayScore += runsScored else updatedHomeScore += runsScored
+                if (extra) {
+                    runnerOnSecondAfter = null
+                    runnerOnThirdAfter = null
+                    baseConditionAfter = BaseCondition.FIRST
                 } else {
-                    updatedHomeScore += 1
+                    runnerOnSecondAfter = null
+                    runnerOnThirdAfter = runnerOnSecond
+                    baseConditionAfter = BaseCondition.FIRST_THIRD
                 }
             }
             BaseCondition.BASED_LOADED -> {
                 runnerOnFirstAfter = null
-                runnerOnSecondAfter = runnerOnFirst
-                runnerOnThirdAfter = runnerOnSecond
-                baseConditionAfter = BaseCondition.BASED_LOADED
-                runsScored = 1
-                if (inningHalf == TOP) {
-                    updatedAwayScore += 1
+                val extra = runnerTakesExtraBase(direction, runnerOnSecond, outs)
+                runsScored = if (extra) 2 else 1
+                if (inningHalf == TOP) updatedAwayScore += runsScored else updatedHomeScore += runsScored
+                if (extra) {
+                    runnerOnSecondAfter = runnerOnFirst
+                    runnerOnThirdAfter = null
+                    baseConditionAfter = BaseCondition.FIRST_SECOND
                 } else {
-                    updatedHomeScore += 1
+                    runnerOnSecondAfter = runnerOnFirst
+                    runnerOnThirdAfter = runnerOnSecond
+                    baseConditionAfter = BaseCondition.BASED_LOADED
                 }
             }
         }
@@ -594,6 +633,7 @@ class BaseRunningService(
         runnerOnThird: Player?,
         homeScore: Int,
         awayScore: Int,
+        direction: HitDirection?,
     ): AtBatOutcome {
         val actualResult = ActualResult.DOUBLE
         var runsScored = 0
@@ -614,8 +654,15 @@ class BaseRunningService(
             BaseCondition.FIRST -> {
                 runnerOnFirstAfter = null
                 runnerOnSecondAfter = null
-                runnerOnThirdAfter = runnerOnFirst
-                baseConditionAfter = BaseCondition.SECOND_THIRD
+                if (runnerTakesExtraBase(direction, runnerOnFirst, outs)) {
+                    runnerOnThirdAfter = null
+                    baseConditionAfter = BaseCondition.SECOND
+                    runsScored = 1
+                    if (inningHalf == TOP) updatedAwayScore += 1 else updatedHomeScore += 1
+                } else {
+                    runnerOnThirdAfter = runnerOnFirst
+                    baseConditionAfter = BaseCondition.SECOND_THIRD
+                }
             }
             BaseCondition.SECOND -> {
                 runnerOnFirstAfter = null
@@ -644,25 +691,31 @@ class BaseRunningService(
             BaseCondition.FIRST_SECOND -> {
                 runnerOnFirstAfter = null
                 runnerOnSecondAfter = null
-                runnerOnThirdAfter = runnerOnFirst
-                baseConditionAfter = BaseCondition.SECOND_THIRD
                 runsScored = 1
-                if (inningHalf == TOP) {
-                    updatedAwayScore += 1
+                if (inningHalf == TOP) updatedAwayScore += 1 else updatedHomeScore += 1
+                if (runnerTakesExtraBase(direction, runnerOnFirst, outs)) {
+                    runnerOnThirdAfter = null
+                    baseConditionAfter = BaseCondition.SECOND
+                    runsScored = 2
+                    if (inningHalf == TOP) updatedAwayScore += 1 else updatedHomeScore += 1
                 } else {
-                    updatedHomeScore += 1
+                    runnerOnThirdAfter = runnerOnFirst
+                    baseConditionAfter = BaseCondition.SECOND_THIRD
                 }
             }
             BaseCondition.FIRST_THIRD -> {
                 runnerOnFirstAfter = null
                 runnerOnSecondAfter = null
-                runnerOnThirdAfter = runnerOnFirst
-                baseConditionAfter = BaseCondition.SECOND_THIRD
-                runsScored = 2
-                if (inningHalf == TOP) {
-                    updatedAwayScore += 2
+                runsScored = 1
+                if (inningHalf == TOP) updatedAwayScore += 1 else updatedHomeScore += 1
+                if (runnerTakesExtraBase(direction, runnerOnFirst, outs)) {
+                    runnerOnThirdAfter = null
+                    baseConditionAfter = BaseCondition.SECOND
+                    runsScored = 2
+                    if (inningHalf == TOP) updatedAwayScore += 1 else updatedHomeScore += 1
                 } else {
-                    updatedHomeScore += 2
+                    runnerOnThirdAfter = runnerOnFirst
+                    baseConditionAfter = BaseCondition.SECOND_THIRD
                 }
             }
             BaseCondition.SECOND_THIRD -> {
@@ -680,13 +733,16 @@ class BaseRunningService(
             BaseCondition.BASED_LOADED -> {
                 runnerOnFirstAfter = null
                 runnerOnSecondAfter = null
-                runnerOnThirdAfter = runnerOnFirst
-                baseConditionAfter = BaseCondition.SECOND_THIRD
                 runsScored = 2
-                if (inningHalf == TOP) {
-                    updatedAwayScore += 2
+                if (inningHalf == TOP) updatedAwayScore += 2 else updatedHomeScore += 2
+                if (runnerTakesExtraBase(direction, runnerOnFirst, outs)) {
+                    runnerOnThirdAfter = null
+                    baseConditionAfter = BaseCondition.SECOND
+                    runsScored = 3
+                    if (inningHalf == TOP) updatedAwayScore += 1 else updatedHomeScore += 1
                 } else {
-                    updatedHomeScore += 2
+                    runnerOnThirdAfter = runnerOnFirst
+                    baseConditionAfter = BaseCondition.SECOND_THIRD
                 }
             }
         }

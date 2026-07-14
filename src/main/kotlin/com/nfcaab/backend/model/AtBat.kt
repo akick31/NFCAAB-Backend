@@ -4,6 +4,8 @@ import com.nfcaab.backend.model.Game.ActualResult
 import com.nfcaab.backend.model.Game.Scenario
 import javax.persistence.Column
 import javax.persistence.Entity
+import javax.persistence.EnumType
+import javax.persistence.Enumerated
 import javax.persistence.GeneratedValue
 import javax.persistence.GenerationType.IDENTITY
 import javax.persistence.Id
@@ -125,7 +127,20 @@ class AtBat {
     @Column(name = "at_bat_finished")
     var atBatFinished: Boolean = false
 
-    // Default constructor
+    @Enumerated(EnumType.STRING)
+    @Column(name = "hit_direction")
+    var hitDirection: Game.HitDirection? = null
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "batted_ball_type")
+    var battedBallType: Game.BattedBallType? = null
+
+    @Column(name = "fielder_position")
+    var fielderPosition: Int? = null
+
+    @Column(name = "assist_sequence")
+    var assistSequence: String? = null
+
     constructor()
 
     // Constructor with parameters

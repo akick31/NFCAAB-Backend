@@ -388,6 +388,21 @@ class Game {
         fun hasForcePlay(): Boolean = hasRunnerOnFirst()
     }
 
+    enum class HitDirection(val description: String) {
+        LEFT("Left"),
+        LEFT_CENTER("Left Center"),
+        CENTER("Center"),
+        RIGHT_CENTER("Right Center"),
+        RIGHT("Right"),
+    }
+
+    enum class BattedBallType(val description: String) {
+        GROUND("Ground Ball"),
+        LINE("Line Drive"),
+        FLY("Fly Ball"),
+        POPUP("Popup"),
+    }
+
     enum class GameType(val description: String) {
         OUT_OF_CONFERENCE("Out of Conference"),
         CONFERENCE_GAME("Conference Game"),

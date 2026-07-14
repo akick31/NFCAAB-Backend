@@ -28,6 +28,7 @@ class AtBatResolutionService(
     private val scorebugService: ScorebugService,
     private val playerService: PlayerService,
     private val baseRunningService: BaseRunningService,
+    private val hitLocationService: HitLocationService,
 ) {
     fun resolveSwing(
         atBat: AtBat,
@@ -56,6 +57,14 @@ class AtBatResolutionService(
             )
         val result = resultInformation.result ?: throw ResultNotFoundException()
 
+        val hitLocation =
+            hitLocationService.determine(
+                result,
+                batter.batterArchetype ?: Player.BatterArchetype.NEUTRAL,
+                batterNumberSubmission,
+                difference,
+            )
+
         val runnerOnFirst = atBat.runnerOnFirst?.let { playerService.getPlayerByNumberAndTeam(atBat.battingTeam ?: "", it) }
         val runnerOnSecond = atBat.runnerOnSecond?.let { playerService.getPlayerByNumberAndTeam(atBat.battingTeam ?: "", it) }
         val runnerOnThird = atBat.runnerOnThird?.let { playerService.getPlayerByNumberAndTeam(atBat.battingTeam ?: "", it) }
@@ -72,6 +81,7 @@ class AtBatResolutionService(
                 runnerOnThird,
                 game.homeScore,
                 game.awayScore,
+                hitLocation.direction,
             )
 
         gameLifecycleService.updateGameValues(game, outcome)
@@ -88,6 +98,7 @@ class AtBatResolutionService(
             decryptedPitcherNumber.toInt(),
             batterNumberSubmission,
             difference,
+            hitLocation,
         )
     }
 
@@ -150,6 +161,7 @@ class AtBatResolutionService(
                 runnerOnThird,
                 game.homeScore,
                 game.awayScore,
+                null,
             )
 
         gameLifecycleService.updateGameValues(game, outcome)
@@ -166,6 +178,7 @@ class AtBatResolutionService(
             decryptedPitcherNumber.toInt(),
             batterNumberSubmission,
             difference,
+            HitLocation(null, null, null),
         )
     }
 
@@ -177,6 +190,7 @@ class AtBatResolutionService(
         decryptedPitcherNumber: Int,
         batterNumberSubmission: Int,
         difference: Int,
+        hitLocation: HitLocation,
     ): AtBat {
         atBat.homeScore = outcome.homeScore
         atBat.awayScore = outcome.awayScore
@@ -190,6 +204,10 @@ class AtBatResolutionService(
         atBat.runnerOnFirstAfter = outcome.runnerOnFirstAfter?.uniformNumber
         atBat.runnerOnSecondAfter = outcome.runnerOnSecondAfter?.uniformNumber
         atBat.runnerOnThirdAfter = outcome.runnerOnThirdAfter?.uniformNumber
+        atBat.hitDirection = hitLocation.direction
+        atBat.battedBallType = hitLocation.battedBallType
+        atBat.fielderPosition = hitLocation.fielderPosition
+        atBat.assistSequence = hitLocation.assistSequence
         atBat.atBatFinished = true
 
         return saveAtBat(atBat)
