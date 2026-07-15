@@ -22,10 +22,13 @@ import java.awt.Color
 import java.awt.Font
 import java.awt.FontMetrics
 import java.awt.Graphics2D
-import java.awt.LinearGradientPaint
+import java.awt.MultipleGradientPaint
+import java.awt.Rectangle
+import java.awt.RadialGradientPaint
 import java.awt.RenderingHints
 import java.awt.geom.AffineTransform
 import java.awt.geom.Path2D
+import java.awt.geom.Point2D
 import java.awt.geom.RoundRectangle2D
 import java.awt.image.BufferedImage
 import java.io.File
@@ -47,28 +50,35 @@ class ScorebugService(
     private val imagePath: String? = null
 
     private val logoCache = ConcurrentHashMap<String, BufferedImage?>()
+    private val logoBoundsCache = ConcurrentHashMap<String, Rectangle?>()
 
     companion object {
-        private const val WIDTH = 600
+        private const val WIDTH = 620
         private const val CORNER_RADIUS = 16.0
-        private const val TOP_PADDING_TOP = 28
-        private const val TOP_PADDING_SIDE = 28
-        private const val TOP_PADDING_BOTTOM = 16
-        private const val LOGO_SIZE = 76
-        private const val DIAMOND_SIZE = 84
-        private const val SCORE_DIAMOND_GAP = 24
-        private const val META_GAP_TOP = 12
-        private const val META_ROW_HEIGHT = 34
-        private const val PEOPLE_PADDING_TOP = 16
+        private const val TOP_PADDING_TOP = 20
+        private const val TOP_PADDING_SIDE = 18
+        private const val TOP_PADDING_BOTTOM = 12
+        private const val LOGO_SIZE = 98
+        private const val DIAMOND_SIZE = 52
+        private const val BASES_VERTICAL_OFFSET = 10
+        private val SCORE_ROW_HEIGHT = maxOf(LOGO_SIZE, DIAMOND_SIZE)
+        private const val META_GAP_TOP = 9
+        private const val META_ROW_HEIGHT = 40
+        private const val PEOPLE_PADDING_TOP = 12
         private const val PEOPLE_PADDING_SIDE = 28
-        private const val PEOPLE_PADDING_BOTTOM = 20
-        private const val PEOPLE_ROW_GAP = 16
-        private const val PERSON_ROW_HEIGHT = 30
+        private const val PEOPLE_PADDING_BOTTOM = 14
+        private const val PEOPLE_ROW_GAP = 10
+        private const val PERSON_ROW_HEIGHT = 28
         private const val BAR_WIDTH = 6
-        private const val BAR_HEIGHT = 30
-        private const val BASE_SQUARE = 26
+        private const val BAR_HEIGHT = 26
+        private const val BASE_SQUARE = 30
+        private const val SQRT_2 = 1.4142135
+        private const val SCORE_TRACKING = -10
+        private const val CORNER_GLOW_RADIUS = 280f
+        private const val CORNER_GLOW_VERTICAL_SQUEEZE = 0.679
+        private const val DIVIDER_INSET = 18
+        private const val DIVIDER_HEIGHT = 1
 
-        private val NEUTRAL_DARK = Color(10, 12, 15)
         private val PEOPLE_PANEL = Color(18, 20, 23)
         private val BASE_UNLIT_FILL = Color(35, 38, 43)
         private val BASE_UNLIT_BORDER = Color(56, 61, 68)
@@ -80,6 +90,7 @@ class ScorebugService(
         private val BATTER_NAME_COLOR = Color(255, 255, 255)
         private val PITCHER_STAT_COLOR = Color(154, 160, 168)
         private val BATTER_STAT_COLOR = Color(216, 218, 221)
+        private val DIVIDER_COLOR = Color(110, 114, 120, 90)
 
         private val SANS_BOLD = Font("SansSerif", Font.BOLD, 1)
         private val SANS_PLAIN = Font("SansSerif", Font.PLAIN, 1)
@@ -235,7 +246,7 @@ class ScorebugService(
         val homeTeam = teamService.getTeamByName(game.homeTeam)
         val awayTeam = teamService.getTeamByName(game.awayTeam)
 
-        val height = TOP_PADDING_TOP + DIAMOND_SIZE + META_GAP_TOP + META_ROW_HEIGHT + TOP_PADDING_BOTTOM +
+        val height = TOP_PADDING_TOP + SCORE_ROW_HEIGHT + META_GAP_TOP + META_ROW_HEIGHT + TOP_PADDING_BOTTOM +
             PEOPLE_PADDING_TOP + PERSON_ROW_HEIGHT + PEOPLE_ROW_GAP + PERSON_ROW_HEIGHT + PEOPLE_PADDING_BOTTOM
 
         val image = BufferedImage(WIDTH, height, BufferedImage.TYPE_INT_ARGB)
@@ -246,9 +257,10 @@ class ScorebugService(
         val cardShape = RoundRectangle2D.Double(0.0, 0.0, WIDTH.toDouble(), height.toDouble(), CORNER_RADIUS, CORNER_RADIUS)
         g.clip = cardShape
 
-        val topPanelHeight = TOP_PADDING_TOP + DIAMOND_SIZE + META_GAP_TOP + META_ROW_HEIGHT + TOP_PADDING_BOTTOM
+        val topPanelHeight = TOP_PADDING_TOP + SCORE_ROW_HEIGHT + META_GAP_TOP + META_ROW_HEIGHT + TOP_PADDING_BOTTOM
         drawTopPanel(g, game, homeTeam, awayTeam, topPanelHeight)
         drawPeoplePanel(g, game, homeTeam, awayTeam, topPanelHeight, height - topPanelHeight)
+        drawSectionDivider(g, topPanelHeight)
 
         g.dispose()
 
@@ -271,55 +283,93 @@ class ScorebugService(
     ) {
         val awayDark = darken(Color.decode(awayTeam.primaryColor))
         val homeDark = darken(Color.decode(homeTeam.primaryColor))
+
+        g.color = PEOPLE_PANEL
+        g.fillRect(0, 0, WIDTH, panelHeight)
+
+        val glowTransform = AffineTransform.getScaleInstance(1.0, CORNER_GLOW_VERTICAL_SQUEEZE)
+
         g.paint =
-            LinearGradientPaint(
-                0f,
-                0f,
-                WIDTH.toFloat(),
-                0f,
-                floatArrayOf(0f, 0.42f, 0.58f, 1f),
-                arrayOf(awayDark, NEUTRAL_DARK, NEUTRAL_DARK, homeDark),
+            RadialGradientPaint(
+                Point2D.Float(0f, 0f),
+                CORNER_GLOW_RADIUS,
+                Point2D.Float(0f, 0f),
+                floatArrayOf(0f, 1f),
+                arrayOf(
+                    Color(awayDark.red, awayDark.green, awayDark.blue, 255),
+                    Color(awayDark.red, awayDark.green, awayDark.blue, 0),
+                ),
+                MultipleGradientPaint.CycleMethod.NO_CYCLE,
+                MultipleGradientPaint.ColorSpaceType.SRGB,
+                glowTransform,
             )
         g.fillRect(0, 0, WIDTH, panelHeight)
 
-        val scoreRowCenterY = TOP_PADDING_TOP + DIAMOND_SIZE / 2
+        g.paint =
+            RadialGradientPaint(
+                Point2D.Float(WIDTH.toFloat(), 0f),
+                CORNER_GLOW_RADIUS,
+                Point2D.Float(WIDTH.toFloat(), 0f),
+                floatArrayOf(0f, 1f),
+                arrayOf(
+                    Color(homeDark.red, homeDark.green, homeDark.blue, 255),
+                    Color(homeDark.red, homeDark.green, homeDark.blue, 0),
+                ),
+                MultipleGradientPaint.CycleMethod.NO_CYCLE,
+                MultipleGradientPaint.ColorSpaceType.SRGB,
+                glowTransform,
+            )
+        g.fillRect(0, 0, WIDTH, panelHeight)
+
+        val awayLogo = loadLogo(awayTeam)
+        val homeLogo = loadLogo(homeTeam)
+        val awayLogoBounds = logoBounds(awayTeam, awayLogo)
+        val homeLogoBounds = logoBounds(homeTeam, homeLogo)
+
+        val scoreRowCenterY = TOP_PADDING_TOP + SCORE_ROW_HEIGHT / 2
         val diamondCenterX = WIDTH / 2
+        val diamondCenterY = scoreRowCenterY + BASES_VERTICAL_OFFSET
+        val baseHalfDiagonal = (BASE_SQUARE * SQRT_2 / 2).toInt()
+        val diamondLeftEdge = diamondCenterX - DIAMOND_SIZE / 2 - baseHalfDiagonal
+        val diamondRightEdge = diamondCenterX + DIAMOND_SIZE / 2 + baseHalfDiagonal
+        val homeLogoLeftEdge = WIDTH - TOP_PADDING_SIDE - LOGO_SIZE
+        val awayVisibleRightEdge = TOP_PADDING_SIDE + visibleRightInset(awayLogo, awayLogoBounds)
+        val homeVisibleLeftEdge = homeLogoLeftEdge + visibleLeftInset(homeLogo, homeLogoBounds)
 
         drawTeamBlock(
             g,
             awayTeam,
+            awayLogo,
             game.awayScore,
             logoX = TOP_PADDING_SIDE,
-            scoreRightEdge = diamondCenterX - DIAMOND_SIZE / 2 - SCORE_DIAMOND_GAP,
+            scoreCenterX = (awayVisibleRightEdge + diamondLeftEdge) / 2,
             rowCenterY = scoreRowCenterY,
-            scoreAlignRight = true,
         )
         drawTeamBlock(
             g,
             homeTeam,
+            homeLogo,
             game.homeScore,
-            logoX = WIDTH - TOP_PADDING_SIDE - LOGO_SIZE,
-            scoreRightEdge = diamondCenterX + DIAMOND_SIZE / 2 + SCORE_DIAMOND_GAP,
+            logoX = homeLogoLeftEdge,
+            scoreCenterX = (diamondRightEdge + homeVisibleLeftEdge) / 2,
             rowCenterY = scoreRowCenterY,
-            scoreAlignRight = false,
         )
 
-        drawDiamond(g, diamondCenterX, scoreRowCenterY, game)
+        drawDiamond(g, diamondCenterX, diamondCenterY, game)
 
-        val metaRowCenterY = TOP_PADDING_TOP + DIAMOND_SIZE + META_GAP_TOP + META_ROW_HEIGHT / 2
+        val metaRowCenterY = TOP_PADDING_TOP + SCORE_ROW_HEIGHT + META_GAP_TOP + META_ROW_HEIGHT / 2
         drawInningAndOuts(g, game, metaRowCenterY)
     }
 
     private fun drawTeamBlock(
         g: Graphics2D,
         team: Team,
+        logo: BufferedImage?,
         score: Int,
         logoX: Int,
-        scoreRightEdge: Int,
+        scoreCenterX: Int,
         rowCenterY: Int,
-        scoreAlignRight: Boolean,
     ) {
-        val logo = loadLogo(team)
         val logoY = rowCenterY - LOGO_SIZE / 2
         if (logo != null) {
             g.drawImage(logo, logoX, logoY, LOGO_SIZE, LOGO_SIZE, null)
@@ -327,13 +377,39 @@ class ScorebugService(
             drawLogoFallback(g, team, logoX, logoY)
         }
 
-        g.font = SANS_BOLD.deriveFont(58f)
+        g.font = SANS_BOLD.deriveFont(86f)
         g.color = SCORE_WHITE
         val scoreText = score.toString()
         val metrics = g.fontMetrics
         val baselineY = rowCenterY + (metrics.ascent - metrics.descent) / 2
-        val scoreX = if (scoreAlignRight) scoreRightEdge - metrics.stringWidth(scoreText) else scoreRightEdge
-        g.drawString(scoreText, scoreX, baselineY)
+        val scoreWidth = trackedStringWidth(metrics, scoreText, SCORE_TRACKING)
+        val scoreX = scoreCenterX - scoreWidth / 2
+        drawTrackedString(g, scoreText, scoreX, baselineY, SCORE_TRACKING)
+    }
+
+    private fun trackedStringWidth(
+        metrics: FontMetrics,
+        text: String,
+        tracking: Int,
+    ): Int {
+        if (text.isEmpty()) return 0
+        val glyphWidths = text.sumOf { metrics.charWidth(it) }
+        return glyphWidths + tracking * (text.length - 1)
+    }
+
+    private fun drawTrackedString(
+        g: Graphics2D,
+        text: String,
+        x: Int,
+        baselineY: Int,
+        tracking: Int,
+    ) {
+        val metrics = g.fontMetrics
+        var cursorX = x
+        for (ch in text) {
+            g.drawString(ch.toString(), cursorX, baselineY)
+            cursorX += metrics.charWidth(ch) + tracking
+        }
     }
 
     private fun drawLogoFallback(
@@ -344,7 +420,7 @@ class ScorebugService(
     ) {
         g.color = Color.decode(team.primaryColor)
         g.fillOval(x, y, LOGO_SIZE, LOGO_SIZE)
-        g.font = SANS_BOLD.deriveFont(20f)
+        g.font = SANS_BOLD.deriveFont(28f)
         g.color = Color.WHITE
         val metrics = g.fontMetrics
         val initials = team.abbreviation.take(2).uppercase()
@@ -390,13 +466,13 @@ class ScorebugService(
         centerY: Int,
     ) {
         val inningText = "${game.inning}${ordinalSuffix(game.inning)}"
-        g.font = SANS_BOLD.deriveFont(22f)
+        g.font = SANS_BOLD.deriveFont(27f)
         val metrics = g.fontMetrics
-        val arrowWidth = 12
-        val arrowGap = 8
-        val outsGap = 24
-        val outsDotSize = 12
-        val outsDotGap = 6
+        val arrowWidth = 16
+        val arrowGap = 5
+        val outsGap = 20
+        val outsDotSize = 15
+        val outsDotGap = 7
 
         val inningTextWidth = metrics.stringWidth(inningText)
         val outsWidth = outsDotSize * 2 + outsDotGap
@@ -441,6 +517,14 @@ class ScorebugService(
         g.fill(path)
     }
 
+    private fun drawSectionDivider(
+        g: Graphics2D,
+        topPanelHeight: Int,
+    ) {
+        g.color = DIVIDER_COLOR
+        g.fillRect(DIVIDER_INSET, topPanelHeight - DIVIDER_HEIGHT, WIDTH - 2 * DIVIDER_INSET, DIVIDER_HEIGHT)
+    }
+
     private fun drawPeoplePanel(
         g: Graphics2D,
         game: Game,
@@ -482,7 +566,7 @@ class ScorebugService(
         g.color = barColor
         g.fillRoundRect(barX, centerY - BAR_HEIGHT / 2, BAR_WIDTH, BAR_HEIGHT, 3, 3)
 
-        g.font = SANS_BOLD.deriveFont(20f)
+        g.font = SANS_BOLD.deriveFont(22f)
         g.color = nameColor
         val nameMetrics: FontMetrics = g.fontMetrics
         val nameX = barX + BAR_WIDTH + 12
@@ -490,7 +574,7 @@ class ScorebugService(
         g.drawString(name, nameX, baselineY)
 
         if (stat != null) {
-            g.font = SANS_PLAIN.deriveFont(16f)
+            g.font = SANS_PLAIN.deriveFont(22f)
             g.color = statColor
             val statMetrics = g.fontMetrics
             val statX = WIDTH - PEOPLE_PADDING_SIDE - statMetrics.stringWidth(stat)
@@ -513,6 +597,53 @@ class ScorebugService(
                 null
             }
         }
+    }
+
+    private fun logoBounds(
+        team: Team,
+        image: BufferedImage?,
+    ): Rectangle? {
+        if (image == null) return null
+        val key = team.scorebugLogo ?: team.logo ?: return null
+        return logoBoundsCache.getOrPut(key) { opaqueBoundingBox(image) }
+    }
+
+    private fun opaqueBoundingBox(image: BufferedImage): Rectangle? {
+        var minX = image.width
+        var maxX = -1
+        var minY = image.height
+        var maxY = -1
+        for (y in 0 until image.height) {
+            for (x in 0 until image.width) {
+                val alpha = (image.getRGB(x, y) ushr 24) and 0xFF
+                if (alpha > 16) {
+                    if (x < minX) minX = x
+                    if (x > maxX) maxX = x
+                    if (y < minY) minY = y
+                    if (y > maxY) maxY = y
+                }
+            }
+        }
+        if (maxX < minX || maxY < minY) return null
+        return Rectangle(minX, minY, maxX - minX + 1, maxY - minY + 1)
+    }
+
+    private fun visibleRightInset(
+        image: BufferedImage?,
+        bounds: Rectangle?,
+    ): Int {
+        if (image == null || bounds == null) return LOGO_SIZE
+        val fraction = (bounds.x + bounds.width).toDouble() / image.width
+        return (fraction * LOGO_SIZE).toInt()
+    }
+
+    private fun visibleLeftInset(
+        image: BufferedImage?,
+        bounds: Rectangle?,
+    ): Int {
+        if (image == null || bounds == null) return 0
+        val fraction = bounds.x.toDouble() / image.width
+        return (fraction * LOGO_SIZE).toInt()
     }
 
     private fun darken(color: Color): Color {
