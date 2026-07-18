@@ -11,6 +11,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.http.ResponseEntity
+import org.springframework.web.client.ResourceAccessException
 import org.springframework.web.client.RestTemplate
 
 class DiscordServiceTest {
@@ -56,7 +57,7 @@ class DiscordServiceTest {
 
         coEvery {
             serverUtils.retryWithExponentialBackoff<ResponseEntity<String>>(any(), any(), any(), any(), any())
-        } throws Exception("Network error")
+        } throws ResourceAccessException("Network error")
 
         val result = discordService.startGameThread(game)
 

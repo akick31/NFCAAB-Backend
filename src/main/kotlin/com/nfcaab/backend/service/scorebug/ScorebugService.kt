@@ -32,6 +32,7 @@ import java.awt.geom.Point2D
 import java.awt.geom.RoundRectangle2D
 import java.awt.image.BufferedImage
 import java.io.File
+import java.io.IOException
 import java.net.URL
 import java.util.Base64
 import java.util.concurrent.ConcurrentHashMap
@@ -161,7 +162,8 @@ class ScorebugService(
     private fun getScorebugBytes(gameId: Int): ByteArray? {
         return try {
             File("$imagePath/scorebugs/${gameId}_scorebug.png").readBytes()
-        } catch (e: Exception) {
+        } catch (e: IOException) {
+            Logger.warn("Could not read scorebug file for game $gameId", e)
             null
         }
     }
@@ -183,8 +185,8 @@ class ScorebugService(
                 }
 
             return ResponseEntity(scorebug, headers, HttpStatus.OK)
-        } catch (e: Exception) {
-            Logger.error("Error fetching scorebug image: ${e.message}")
+        } catch (e: IOException) {
+            Logger.error("Error fetching scorebug image for game ${game.id}", e)
             return ResponseEntity(HttpStatus.NOT_FOUND)
         }
     }
@@ -231,8 +233,8 @@ class ScorebugService(
             }
 
             return ResponseEntity(scorebugs, HttpStatus.OK)
-        } catch (e: Exception) {
-            Logger.error("Error fetching scorebug images: ${e.message}")
+        } catch (e: IOException) {
+            Logger.error("Error fetching scorebug images for conference ${conference.name}", e)
             return ResponseEntity(HttpStatus.NOT_FOUND)
         }
     }
@@ -592,8 +594,8 @@ class ScorebugService(
                 } else {
                     ImageIO.read(File(path))
                 }
-            } catch (e: Exception) {
-                Logger.warn("Failed to load logo for team ${team.name} from $path: ${e.message}")
+            } catch (e: IOException) {
+                Logger.warn("Failed to load logo for team ${team.name} from $path", e)
                 null
             }
         }

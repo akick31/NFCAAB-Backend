@@ -8,6 +8,7 @@ import com.nfcaab.backend.model.Game.GameType.REGIONAL
 import com.nfcaab.backend.model.Game.GameType.SUPER_REGIONAL
 import com.nfcaab.backend.model.Team
 import com.nfcaab.backend.repositories.TeamRepository
+import com.nfcaab.backend.util.Logger
 import com.nfcaab.backend.util.NoCoachDiscordIdFoundException
 import com.nfcaab.backend.util.TeamNotFoundException
 import kotlinx.coroutines.Dispatchers
@@ -152,6 +153,7 @@ class TeamService(
                 )
             return newTeam
         } catch (e: Exception) {
+            Logger.error("Error creating team ${team.name}", e)
             throw e
         }
     }

@@ -13,6 +13,7 @@ import org.springframework.http.HttpEntity
 import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Service
+import org.springframework.web.client.RestClientException
 import org.springframework.web.client.RestTemplate
 
 @Service
@@ -46,8 +47,8 @@ class DiscordService(
                     restTemplate.postForEntity(discordBotUrl, requestEntity, String::class.java)
                 }
             response.body?.split(",")
-        } catch (e: Exception) {
-            Logger.error("There was an error starting the game thread for ${game.id}: ${e.message}")
+        } catch (e: RestClientException) {
+            Logger.error("There was an error starting the game thread for ${game.id}", e)
             null
         }
     }
@@ -67,8 +68,8 @@ class DiscordService(
         val requestEntity = HttpEntity(game, headers)
         try {
             restTemplate.postForEntity(discordBotUrl, requestEntity, String::class.java)
-        } catch (e: Exception) {
-            Logger.error("There was an error notifying the delay of game for ${game.id}: " + e.message)
+        } catch (e: RestClientException) {
+            Logger.error("There was an error notifying the delay of game for ${game.id}", e)
         }
     }
 
@@ -84,8 +85,8 @@ class DiscordService(
         val requestEntity = HttpEntity(game, headers)
         try {
             restTemplate.postForEntity(discordBotUrl, requestEntity, String::class.java)
-        } catch (e: Exception) {
-            Logger.error("There was an error notifying the delay of game  warning for ${game.id}: " + e.message)
+        } catch (e: RestClientException) {
+            Logger.error("There was an error notifying the delay of game warning for ${game.id}", e)
         }
     }
 
@@ -107,7 +108,7 @@ class DiscordService(
             }
             throw DiscordUserNotFoundException()
         } catch (e: Exception) {
-            Logger.error("{}", e)
+            Logger.error("Error looking up Discord user by tag $tag", e)
             throw DiscordUserNotFoundException()
         }
     }

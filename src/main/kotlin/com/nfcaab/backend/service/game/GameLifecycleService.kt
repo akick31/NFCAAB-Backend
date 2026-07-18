@@ -167,7 +167,7 @@ class GameLifecycleService(
             Logger.info("Game started: ${newGame.homeTeam} vs ${newGame.awayTeam}")
             return newGame
         } catch (e: Exception) {
-            Logger.error("Error starting ${startRequest.homeTeam} vs ${startRequest.awayTeam}: " + e.message!!)
+            Logger.error("Error starting ${startRequest.homeTeam} vs ${startRequest.awayTeam}", e)
             throw e
         }
     }
@@ -359,7 +359,7 @@ class GameLifecycleService(
             gameStatsService.generateGameStats(game.id)
             gameService.saveGame(game)
         } catch (e: Exception) {
-            Logger.error("There was an error rolling back the plate appearance for game ${game.id}: " + e.message)
+            Logger.error("There was an error rolling back the plate appearance for game ${game.id}", e)
             throw e
         }
     }
@@ -441,7 +441,7 @@ class GameLifecycleService(
             Logger.info("Game ${game.id} ended")
             return game
         } catch (e: Exception) {
-            Logger.error("Error in ${game.id}: " + e.message!!)
+            Logger.error("Error ending game ${game.id}", e)
             throw e
         }
     }

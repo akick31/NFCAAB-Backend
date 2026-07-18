@@ -86,7 +86,7 @@ class AtBatService(
             gameLifecycleService.updateWithPitcherNumberSubmission(game, atBat)
             return atBat
         } catch (e: Exception) {
-            Logger.error("There was an error submitting the pitching number for game $gameId: " + e.message)
+            Logger.error("There was an error submitting the pitching number for game $gameId", e)
             throw e
         }
     }
@@ -159,7 +159,7 @@ class AtBatService(
 
             return atBat
         } catch (e: Exception) {
-            Logger.error("There was an error submitting the batting number for game $gameId: " + e.message)
+            Logger.error("There was an error submitting the batting number for game $gameId", e)
             throw e
         }
     }
@@ -173,7 +173,7 @@ class AtBatService(
             atBatRepository.deleteById(atBat.id)
             return previousAtBat
         } catch (e: Exception) {
-            Logger.error("There was an error rolling back the play for game $gameId: " + e.message)
+            Logger.error("There was an error rolling back the play for game $gameId", e)
             throw e
         }
     }

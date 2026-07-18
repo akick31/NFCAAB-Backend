@@ -63,6 +63,22 @@ class PlayerServiceTest {
     }
 
     @Test
+    fun `getPlayersByTeam should return active players for the team`() {
+        val team = "Team A"
+        val players = listOf(
+            Player().apply { currentTeam = team; active = true },
+            Player().apply { currentTeam = team; active = true },
+        )
+
+        every { playerRepository.findByCurrentTeamAndActive(team, true) } returns players
+
+        val result = playerService.getPlayersByTeam(team)
+
+        assertEquals(players, result)
+        verify { playerRepository.findByCurrentTeamAndActive(team, true) }
+    }
+
+    @Test
     fun `rolloverEligibilityForNewSeason should advance non-senior players by one year`() {
         val sophomore = Player().apply { collegeYear = Player.CollegeYear.SOPHOMORE }
 

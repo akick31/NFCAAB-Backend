@@ -126,7 +126,7 @@ class UserService(
     fun getUserByUsernameOrEmail(usernameOrEmail: String) =
         try {
             getUserByEmail(usernameOrEmail)
-        } catch (e: Exception) {
+        } catch (e: UserNotFoundException) {
             getUserByUsername(usernameOrEmail)
         }
 

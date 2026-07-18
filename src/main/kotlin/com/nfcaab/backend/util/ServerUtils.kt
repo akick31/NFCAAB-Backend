@@ -28,7 +28,7 @@ class ServerUtils {
             try {
                 return block()
             } catch (e: Exception) {
-                Logger.warn("Attempt ${attempt + 1} failed: ${e.message}. Retrying in ${currentDelay}ms...")
+                Logger.warn("Attempt ${attempt + 1} failed, retrying in ${currentDelay}ms", e)
             }
             delay(currentDelay)
             currentDelay = (currentDelay * factor).toLong().coerceAtMost(maxDelay)

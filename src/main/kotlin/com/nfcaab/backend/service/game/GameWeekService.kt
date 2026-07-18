@@ -51,7 +51,7 @@ class GameWeekService(
                 scheduleService.markGameAsStarted(game)
                 count += 1
             } catch (e: Exception) {
-                Logger.error("Error starting ${game.homeTeam} vs ${game.awayTeam}: " + e.message!!)
+                Logger.error("Error starting ${game.homeTeam} vs ${game.awayTeam}", e)
                 continue
             }
         }

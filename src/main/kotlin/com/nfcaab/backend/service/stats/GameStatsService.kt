@@ -81,7 +81,8 @@ class GameStatsService(
                 generateGameStats(game.id)
             }
         } catch (e: Exception) {
-            throw Exception("Could not generate game stats for games more recent than game ID $gameId")
+            Logger.error("Could not generate game stats for games more recent than game ID $gameId", e)
+            throw Exception("Could not generate game stats for games more recent than game ID $gameId", e)
         }
     }
 
@@ -100,7 +101,8 @@ class GameStatsService(
                 generateGameStats(game.id)
             }
         } catch (e: Exception) {
-            throw Exception("Could not generate game stats")
+            Logger.error("Could not generate game stats", e)
+            throw Exception("Could not generate game stats", e)
         }
     }
 

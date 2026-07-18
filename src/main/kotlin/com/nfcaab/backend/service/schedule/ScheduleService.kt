@@ -54,7 +54,7 @@ class ScheduleService(
                 seasonService.incrementWeek()
             }
         } catch (e: Exception) {
-            Logger.error("Unable to mark game as finished", e)
+            Logger.error("Unable to mark game ${game.id} as finished", e)
         }
     }
 

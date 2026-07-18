@@ -107,7 +107,7 @@ class DelayOfGameMonitorTest {
         every { gameService.findExpiredTimers() } returns listOf(expiredGame)
         every { gameService.calculateDelayOfGameTimer() } returns "2024-01-01 12:00:00"
         every { atBatService.getHomeDelayOfGameInstances(any()) } returns 1
-        every { atBatService.getCurrentAtBat(any()) } throws Exception("No current at bat")
+        every { atBatService.getCurrentAtBatOrNull(any()) } returns null
         every { userService.getUserByDiscordId(any()) } returns savedUser
         every { userService.saveUser(any()) } returns savedUser
         every { gameService.saveGame(any()) } returns expiredGame
@@ -161,7 +161,7 @@ class DelayOfGameMonitorTest {
         every { gameService.findExpiredTimers() } returns listOf(expiredGame)
         every { gameService.calculateDelayOfGameTimer() } returns "2024-01-01 12:00:00"
         every { atBatService.getAwayDelayOfGameInstances(any()) } returns 1
-        every { atBatService.getCurrentAtBat(any()) } returns pendingAtBat
+        every { atBatService.getCurrentAtBatOrNull(any()) } returns pendingAtBat
         every { userService.getUserByDiscordId(any()) } returns User().apply { id = 1 }
         every { userService.saveUser(any()) } returns User().apply { id = 1 }
         every { lineupService.getBatterByLineupSpot(any(), any(), any()) } returns batter()
@@ -192,7 +192,7 @@ class DelayOfGameMonitorTest {
         every { gameService.findExpiredTimers() } returns listOf(expiredGame)
         every { gameService.calculateDelayOfGameTimer() } returns "2024-01-01 12:00:00"
         every { atBatService.getAwayDelayOfGameInstances(any()) } returns 1
-        every { atBatService.getCurrentAtBat(any()) } returns pendingAtBat
+        every { atBatService.getCurrentAtBatOrNull(any()) } returns pendingAtBat
         every { userService.getUserByDiscordId(any()) } returns User().apply { id = 1 }
         every { userService.saveUser(any()) } returns User().apply { id = 1 }
         every { lineupService.getBatterByLineupSpot(any(), any(), any()) } returns batter()
@@ -221,7 +221,7 @@ class DelayOfGameMonitorTest {
         every { gameService.findExpiredTimers() } returns listOf(expiredGame)
         every { gameService.calculateDelayOfGameTimer() } returns "2024-01-01 12:00:00"
         every { atBatService.getAwayDelayOfGameInstances(any()) } returns 1
-        every { atBatService.getCurrentAtBat(any()) } returns pendingAtBat
+        every { atBatService.getCurrentAtBatOrNull(any()) } returns pendingAtBat
         every { userService.getUserByDiscordId(any()) } returns User().apply { id = 1 }
         every { userService.saveUser(any()) } returns User().apply { id = 1 }
         every { atBatRepository.save(any()) } answers { firstArg() }
@@ -246,7 +246,7 @@ class DelayOfGameMonitorTest {
         every { gameService.findExpiredTimers() } returns listOf(expiredGame)
         every { gameService.calculateDelayOfGameTimer() } returns "2024-01-01 12:00:00"
         every { atBatService.getAwayDelayOfGameInstances(any()) } returns 1
-        every { atBatService.getCurrentAtBat(any()) } returns pendingAtBat
+        every { atBatService.getCurrentAtBatOrNull(any()) } returns pendingAtBat
         every { userService.getUserByDiscordId(any()) } returns User().apply { id = 1 }
         every { userService.saveUser(any()) } returns User().apply { id = 1 }
         every { atBatRepository.save(any()) } answers { firstArg() }

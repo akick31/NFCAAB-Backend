@@ -126,12 +126,7 @@ class DelayOfGameMonitor(
             }
         }
 
-        val currentAtBat =
-            try {
-                atBatService.getCurrentAtBat(game.id)
-            } catch (e: Exception) {
-                null
-            }
+        val currentAtBat = atBatService.getCurrentAtBatOrNull(game.id)
 
         val savedAtBat =
             if (currentAtBat != null) {

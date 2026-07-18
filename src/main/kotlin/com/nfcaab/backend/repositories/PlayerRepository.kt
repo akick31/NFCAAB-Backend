@@ -12,5 +12,10 @@ interface PlayerRepository : CrudRepository<Player, Int> {
         team: String,
         uniformNumber: Int?,
     ): Player?
+
+    fun findByCurrentTeamAndActive(
+        currentTeam: String,
+        active: Boolean,
+    ): List<Player>
 }
 

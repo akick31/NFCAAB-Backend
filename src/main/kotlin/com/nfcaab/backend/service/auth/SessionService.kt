@@ -1,6 +1,7 @@
 package com.nfcaab.backend.service.auth
 
 import com.nfcaab.backend.repositories.SessionRepository
+import io.jsonwebtoken.JwtException
 import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.security.Keys
 import org.springframework.beans.factory.annotation.Value
@@ -58,7 +59,7 @@ class SessionService(
         return try {
             val claims = Jwts.parserBuilder().setSigningKey(signingKey).build().parseClaimsJws(token)
             !claims.body.expiration.before(Date())
-        } catch (e: Exception) {
+        } catch (e: JwtException) {
             false
         }
     }

@@ -3,6 +3,7 @@ package com.nfcaab.backend.service.email
 import com.nfcaab.backend.util.EncryptionUtils
 import com.nfcaab.backend.util.Logger
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.mail.MailException
 import org.springframework.mail.SimpleMailMessage
 import org.springframework.mail.javamail.JavaMailSender
 import org.springframework.stereotype.Service
@@ -40,7 +41,7 @@ class EmailService(
             The Fake College Baseball Team
             """.trimIndent()
 
-        sendEmail(email, subject, emailBody)
+        sendEmail(email, userId, subject, emailBody)
     }
 
     fun sendPasswordResetEmail(
@@ -63,7 +64,7 @@ class EmailService(
             The Fake College Baseball Team
             """.trimIndent()
 
-        sendEmail(email, subject, emailBody)
+        sendEmail(email, userId, subject, emailBody)
     }
 
     /**
@@ -71,6 +72,7 @@ class EmailService(
      */
     private fun sendEmail(
         to: String,
+        userId: Long,
         subject: String,
         text: String,
     ) {
@@ -80,9 +82,9 @@ class EmailService(
             message.setSubject(subject)
             message.setText(text)
             mailSender.send(message)
-            Logger.debug("Email sent to $to")
-        } catch (e: Exception) {
-            Logger.debug("{}", e)
+            Logger.debug("Email sent to user $userId")
+        } catch (e: MailException) {
+            Logger.warn("Failed to send email to user $userId: $subject", e)
         }
     }
 }

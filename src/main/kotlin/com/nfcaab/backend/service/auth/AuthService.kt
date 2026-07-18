@@ -34,7 +34,7 @@ class AuthService(
             Logger.info("User ${signup.username} registered successfully. Verification email sent.")
             return signup
         } catch (e: Exception) {
-            Logger.error("Error creating new sign up: ", e.message)
+            Logger.error("Error creating new sign up for ${newSignup.username}", e)
             throw e
         }
     }

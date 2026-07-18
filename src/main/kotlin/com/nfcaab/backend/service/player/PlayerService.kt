@@ -46,5 +46,7 @@ class PlayerService(
             ?: throw PlayerNotFoundException("Player with uniform number $uniformNumber not found for team $team")
     }
 
+    fun getPlayersByTeam(team: String): List<Player> = playerRepository.findByCurrentTeamAndActive(team, true)
+
     fun savePlayer(player: Player): Player = playerRepository.save(player)
 }
