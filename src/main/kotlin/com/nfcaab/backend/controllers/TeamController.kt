@@ -1,7 +1,7 @@
 package com.nfcaab.backend.controllers
 
 import com.nfcaab.backend.model.Team
-import org.springframework.web.bind.annotation.CrossOrigin
+import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
@@ -12,7 +12,6 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import com.nfcaab.backend.service.team.TeamService
 
-@CrossOrigin(origins = ["*"])
 @RestController
 @RequestMapping("/team")
 class TeamController(
@@ -48,6 +47,7 @@ class TeamController(
      * Create a team
      * @param team
      */
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("")
     fun createTeam(
         @RequestBody team: Team,
@@ -57,6 +57,7 @@ class TeamController(
      * Update a team
      * @param team
      */
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("")
     fun updateTeam(
         @RequestBody team: Team,
@@ -67,6 +68,7 @@ class TeamController(
      * @param team
      * @param discordId
      */
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/hire")
     suspend fun hireCoach(
         @RequestParam team: String?,
@@ -79,6 +81,7 @@ class TeamController(
      * @param discordId
      * @param processedBy
      */
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/hire/interim")
     suspend fun hireInterimCoach(
         @RequestParam team: String,
@@ -90,6 +93,7 @@ class TeamController(
      * Fire all coaches for a team
      * @param team
      */
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/fire")
     fun fireCoach(
         @RequestParam team: String,
@@ -104,6 +108,7 @@ class TeamController(
     /**
      * Delete a team
      */
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("")
     fun deleteTeam(
         @RequestParam id: Int,

@@ -3,7 +3,6 @@ package com.nfcaab.backend.controllers
 import com.nfcaab.backend.model.AtBat
 import com.nfcaab.backend.model.AtBat.SubmissionType
 import com.nfcaab.backend.service.discord.DiscordService
-import org.springframework.web.bind.annotation.CrossOrigin
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestMapping
@@ -11,7 +10,6 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import com.nfcaab.backend.service.atbat.AtBatService
 
-@CrossOrigin(origins = ["*"])
 @RestController
 @RequestMapping("/discord")
 class DiscordController(

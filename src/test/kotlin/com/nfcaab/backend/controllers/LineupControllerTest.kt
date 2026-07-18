@@ -5,25 +5,30 @@ import com.nfcaab.backend.dto.requests.LineupSubmissionRequest
 import com.nfcaab.backend.model.GameLineup
 import com.nfcaab.backend.model.LineupToken
 import com.nfcaab.backend.model.Player
+import com.nfcaab.backend.model.User
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.springframework.security.core.Authentication
 import com.nfcaab.backend.service.lineup.LineupService
 import com.nfcaab.backend.service.lineup.LineupTokenService
+import com.nfcaab.backend.service.user.UserService
 
 class LineupControllerTest {
     private lateinit var lineupService: LineupService
     private lateinit var lineupTokenService: LineupTokenService
+    private lateinit var userService: UserService
     private lateinit var lineupController: LineupController
 
     @BeforeEach
     fun setUp() {
         lineupService = mockk()
         lineupTokenService = mockk()
-        lineupController = LineupController(lineupService, lineupTokenService)
+        userService = mockk()
+        lineupController = LineupController(lineupService, lineupTokenService, userService)
     }
 
     private fun fullLineupBatters() =
@@ -102,5 +107,34 @@ class LineupControllerTest {
 
         assertEquals(lineupToken, result)
         verify { lineupTokenService.validateToken("test-token") }
+    }
+
+    @Test
+    fun `getMyActiveLineupTokens should return active tokens for the caller's team`() {
+        val authentication = mockk<Authentication>()
+        val user = User().apply { team = "Team A" }
+        val tokens = listOf(LineupToken().apply { token = "test-token" })
+
+        every { authentication.name } returns "7"
+        every { userService.getUserById(7L) } returns user
+        every { lineupTokenService.getActiveTokensForTeam("Team A") } returns tokens
+
+        val result = lineupController.getMyActiveLineupTokens(authentication)
+
+        assertEquals(tokens, result)
+        verify { lineupTokenService.getActiveTokensForTeam("Team A") }
+    }
+
+    @Test
+    fun `getMyActiveLineupTokens should return empty list when the caller has no team`() {
+        val authentication = mockk<Authentication>()
+        val user = User().apply { team = null }
+
+        every { authentication.name } returns "7"
+        every { userService.getUserById(7L) } returns user
+
+        val result = lineupController.getMyActiveLineupTokens(authentication)
+
+        assertEquals(emptyList<LineupToken>(), result)
     }
 }

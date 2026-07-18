@@ -4,7 +4,8 @@ import com.nfcaab.backend.dto.requests.LineupSubmissionRequest
 import com.nfcaab.backend.dto.requests.LineupSubstitutionRequest
 import com.nfcaab.backend.model.GameLineup
 import com.nfcaab.backend.model.LineupToken
-import org.springframework.web.bind.annotation.CrossOrigin
+import org.springframework.security.access.prepost.PreAuthorize
+import org.springframework.security.core.Authentication
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
@@ -14,14 +15,16 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import com.nfcaab.backend.service.lineup.LineupService
 import com.nfcaab.backend.service.lineup.LineupTokenService
+import com.nfcaab.backend.service.user.UserService
 
-@CrossOrigin(origins = ["*"])
 @RestController
 @RequestMapping("/lineup")
 class LineupController(
     private val lineupService: LineupService,
     private val lineupTokenService: LineupTokenService,
+    private val userService: UserService,
 ) {
+    @PreAuthorize("hasAnyRole('ADMIN','SERVICE')")
     @PostMapping("/token")
     fun generateToken(
         @RequestParam("gameId") gameId: Int,
@@ -35,6 +38,12 @@ class LineupController(
         @PathVariable("token") token: String,
     ): LineupToken {
         return lineupTokenService.validateToken(token)
+    }
+
+    @GetMapping("/tokens/mine")
+    fun getMyActiveLineupTokens(authentication: Authentication): List<LineupToken> {
+        val team = userService.getUserById(authentication.name.toLong()).team ?: return emptyList()
+        return lineupTokenService.getActiveTokensForTeam(team)
     }
 
     @PostMapping("/submit")

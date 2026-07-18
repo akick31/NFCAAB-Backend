@@ -51,6 +51,9 @@ class NewSignup {
     @Column(name = "approved")
     var approved: Boolean = false
 
+    @Column(name = "email_verified")
+    var emailVerified: Boolean = false
+
     // Default constructor
     constructor()
 

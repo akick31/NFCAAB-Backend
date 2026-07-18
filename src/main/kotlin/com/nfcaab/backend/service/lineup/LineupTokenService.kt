@@ -57,4 +57,7 @@ class LineupTokenService(
         lineupToken.used = true
         return lineupTokenRepository.save(lineupToken)
     }
+
+    fun getActiveTokensForTeam(team: String): List<LineupToken> =
+        lineupTokenRepository.findByTeamAndUsedFalseAndExpiresAtAfter(team, LocalDateTime.now())
 }

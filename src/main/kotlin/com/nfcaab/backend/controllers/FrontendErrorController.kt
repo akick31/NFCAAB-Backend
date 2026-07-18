@@ -6,7 +6,6 @@ import com.nfcaab.backend.util.Logger
 import org.slf4j.MDC
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
-import org.springframework.web.bind.annotation.CrossOrigin
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
@@ -16,7 +15,6 @@ import javax.servlet.http.HttpServletRequest
 private const val MAX_REQUESTS_PER_WINDOW = 20
 private const val WINDOW_SECONDS = 60L
 
-@CrossOrigin(origins = ["*"])
 @RestController
 @RequestMapping("/internal/frontend-errors")
 class FrontendErrorController(

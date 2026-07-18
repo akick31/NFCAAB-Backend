@@ -11,6 +11,7 @@ import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Component
 import java.time.LocalDateTime
 import java.util.UUID
+import javax.servlet.http.HttpServletResponse
 import com.nfcaab.backend.service.user.UserService
 import com.nfcaab.backend.service.user.NewSignupService
 
@@ -20,6 +21,7 @@ class AuthService(
     private val userService: UserService,
     private val newSignupService: NewSignupService,
     private val sessionService: SessionService,
+    private val authCookieService: AuthCookieService,
     private val passwordEncoder: PasswordEncoder,
 ) {
     /**
@@ -48,22 +50,30 @@ class AuthService(
     fun login(
         usernameOrEmail: String,
         password: String,
+        response: HttpServletResponse,
     ): LoginResponse {
         val user = userService.getUserByUsernameOrEmail(usernameOrEmail)
         if (!passwordEncoder.matches(password, user.password)) {
             throw UserUnauthorizedException()
         }
-        val token = sessionService.generateToken(user.id)
-        return LoginResponse(token, user.id, user.role)
+        authCookieService.issueAuthCookie(response, user.id)
+        return LoginResponse(user.id, user.role)
     }
 
     /**
      * Logout a user
      * @param token
+     * @param response
      * @return
      */
-    fun logout(token: String): String {
-        sessionService.blacklistUserSession(token)
+    fun logout(
+        token: String?,
+        response: HttpServletResponse,
+    ): String {
+        if (token != null) {
+            sessionService.blacklistUserSession(token)
+        }
+        authCookieService.clearAuthCookie(response)
         return "User logged out successfully"
     }
 
@@ -74,7 +84,9 @@ class AuthService(
      */
     fun verifyEmail(token: String): Boolean {
         val newSignup = newSignupService.getByVerificationToken(token)
-        return newSignupService.approveNewSignup(newSignup)
+        newSignup.emailVerified = true
+        newSignupService.saveNewSignup(newSignup)
+        return true
     }
 
     /**

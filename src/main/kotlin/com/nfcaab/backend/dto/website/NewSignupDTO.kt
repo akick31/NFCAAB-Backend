@@ -10,5 +10,6 @@ data class NewSignupDTO(
     var teamChoiceTwo: String,
     var teamChoiceThree: String,
     var approved: Boolean,
+    var emailVerified: Boolean,
 )
 

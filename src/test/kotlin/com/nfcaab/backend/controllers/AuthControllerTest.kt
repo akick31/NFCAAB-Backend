@@ -1,6 +1,7 @@
 package com.nfcaab.backend.controllers
 
 import com.nfcaab.backend.model.NewSignup
+import com.nfcaab.backend.service.auth.AuthCookieService
 import com.nfcaab.backend.service.auth.AuthService
 import io.mockk.every
 import io.mockk.mockk
@@ -9,15 +10,19 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.http.ResponseEntity
+import javax.servlet.http.HttpServletRequest
+import javax.servlet.http.HttpServletResponse
 
 class AuthControllerTest {
     private lateinit var authService: AuthService
+    private lateinit var authCookieService: AuthCookieService
     private lateinit var authController: AuthController
 
     @BeforeEach
     fun setUp() {
         authService = mockk()
-        authController = AuthController(authService)
+        authCookieService = mockk()
+        authController = AuthController(authService, authCookieService)
     }
 
     @Test
@@ -36,25 +41,29 @@ class AuthControllerTest {
     fun `login should call authService login`() {
         val usernameOrEmail = "testuser"
         val password = "password123"
+        val response: HttpServletResponse = mockk()
         val expectedResult = mockk<com.nfcaab.backend.dto.website.LoginResponse>()
-        every { authService.login(usernameOrEmail, password) } returns expectedResult
+        every { authService.login(usernameOrEmail, password, response) } returns expectedResult
 
-        val result = authController.login(usernameOrEmail, password)
+        val result = authController.login(usernameOrEmail, password, response)
 
         assertEquals(expectedResult, result)
-        verify { authService.login(usernameOrEmail, password) }
+        verify { authService.login(usernameOrEmail, password, response) }
     }
 
     @Test
-    fun `logout should call authService logout`() {
+    fun `logout should call authService logout with the cookie's token`() {
         val token = "testToken123"
+        val request: HttpServletRequest = mockk()
+        val response: HttpServletResponse = mockk()
         val expectedResult = "User logged out successfully"
-        every { authService.logout(token) } returns expectedResult
+        every { authCookieService.readAuthCookie(request) } returns token
+        every { authService.logout(token, response) } returns expectedResult
 
-        val result = authController.logout(token)
+        val result = authController.logout(request, response)
 
         assertEquals(expectedResult, result)
-        verify { authService.logout(token) }
+        verify { authService.logout(token, response) }
     }
 
     @Test

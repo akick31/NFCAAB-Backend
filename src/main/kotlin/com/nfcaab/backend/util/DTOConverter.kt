@@ -47,6 +47,7 @@ class DTOConverter {
             teamChoiceTwo = newSignup.teamChoiceTwo,
             teamChoiceThree = newSignup.teamChoiceThree,
             approved = newSignup.approved,
+            emailVerified = newSignup.emailVerified,
         )
     }
 }

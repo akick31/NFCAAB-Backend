@@ -10,6 +10,7 @@ import com.nfcaab.backend.repositories.UserRepository
 import com.nfcaab.backend.util.EmailNotFoundException
 import com.nfcaab.backend.util.EncryptionUtils
 import com.nfcaab.backend.util.Logger
+import com.nfcaab.backend.util.NewSignupNotVerifiedException
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.stereotype.Service
 import java.util.UUID
@@ -74,6 +75,9 @@ class NewSignupService(
      * @return Boolean
      */
     fun approveNewSignup(newSignup: NewSignup): Boolean {
+        if (!newSignup.emailVerified) {
+            throw NewSignupNotVerifiedException("New signup ${newSignup.id} has not verified their email yet")
+        }
         try {
             newSignup.apply {
                 approved = true

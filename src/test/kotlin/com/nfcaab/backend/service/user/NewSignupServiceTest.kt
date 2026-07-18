@@ -6,6 +6,7 @@ import com.nfcaab.backend.repositories.NewSignupRepository
 import com.nfcaab.backend.repositories.UserRepository
 import com.nfcaab.backend.util.EmailNotFoundException
 import com.nfcaab.backend.util.EncryptionUtils
+import com.nfcaab.backend.util.NewSignupNotVerifiedException
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -114,6 +115,7 @@ class NewSignupServiceTest {
             discordTag = "test#1234"
             discordId = "123456"
             approved = false
+            emailVerified = true
         }
 
         every { newSignupRepository.save(any()) } returns newSignup
@@ -124,6 +126,19 @@ class NewSignupServiceTest {
         assertEquals(true, result)
         verify { newSignupRepository.save(any()) }
         verify { userService.saveUser(any()) }
+    }
+
+    @Test
+    fun `approveNewSignup should reject a signup whose email has not been verified`() {
+        val newSignup = NewSignup().apply {
+            id = 1L
+            username = "testuser"
+            emailVerified = false
+        }
+
+        assertThrows(NewSignupNotVerifiedException::class.java) {
+            newSignupService.approveNewSignup(newSignup)
+        }
     }
 
     @Test

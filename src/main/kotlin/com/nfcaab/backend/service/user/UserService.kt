@@ -5,6 +5,7 @@ import com.nfcaab.backend.model.Game
 import com.nfcaab.backend.model.Game.GameType
 import com.nfcaab.backend.model.User
 import com.nfcaab.backend.dto.website.UserDTO
+import com.nfcaab.backend.dto.requests.SelfUserUpdateRequest
 import com.nfcaab.backend.dto.requests.UserValidationRequest
 import com.nfcaab.backend.dto.response.UserValidationResponse
 import com.nfcaab.backend.repositories.UserRepository
@@ -92,7 +93,7 @@ class UserService(
      * Get a user DTO by its ID
      * @param id
      */
-    private fun getUserDTOById(id: Long) = dtoConverter.convertToUserDTO(getUserById(id))
+    fun getUserDTOById(id: Long) = dtoConverter.convertToUserDTO(getUserById(id))
 
     /**
      * Get a user by its ID
@@ -199,19 +200,22 @@ class UserService(
     }
 
     /**
-     * Update a user's email
+     * Update the authenticated user's own username, email, and/or password.
+     * Only the fields present in the request are changed.
      * @param id
-     * @param email
-     * @return Boolean
+     * @param request
      */
-    fun updateEmail(
+    fun updateSelf(
         id: Long,
-        email: String,
+        request: SelfUserUpdateRequest,
     ): UserDTO {
         val user = getUserById(id)
-        user.apply {
-            this.email = email
+        request.username?.let { user.username = it }
+        request.email?.let {
+            user.email = it
+            user.hashedEmail = encryptionUtils.hash(it)
         }
+        request.password?.let { user.password = BCryptPasswordEncoder().encode(it) }
         saveUser(user)
         return dtoConverter.convertToUserDTO(user)
     }

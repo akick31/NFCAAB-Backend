@@ -2,6 +2,8 @@ package com.nfcaab.backend.controllers
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
+import com.nfcaab.backend.repositories.UserRepository
+import com.nfcaab.backend.service.auth.AuthCookieService
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpEntity
 import org.springframework.http.HttpHeaders
@@ -13,9 +15,13 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.client.RestTemplate
+import javax.servlet.http.HttpServletResponse
 
 @RestController
-class DiscordOAuthController {
+class DiscordOAuthController(
+    private val userRepository: UserRepository,
+    private val authCookieService: AuthCookieService,
+) {
     @Value("\${discord.client.id}")
     private lateinit var clientId: String
 
@@ -33,6 +39,7 @@ class DiscordOAuthController {
     @GetMapping("/discord/redirect")
     fun handleDiscordRedirect(
         @RequestParam("code") code: String,
+        response: HttpServletResponse,
     ): ResponseEntity<String> {
         // Step 1: Exchange the code for an access token
         val tokenUrl = "https://discord.com/api/oauth2/token"
@@ -87,6 +94,14 @@ class DiscordOAuthController {
                     val userResponseMap: Map<String, Any> = objectMapper.readValue(userResponseBody!!)
                     val discordTag = "${userResponseMap["username"]}"
                     val discordId = "${userResponseMap["id"]}"
+
+                    val existingUser = userRepository.getByDiscordId(discordId)
+                    if (existingUser != null) {
+                        authCookieService.issueAuthCookie(response, existingUser.id)
+                        return ResponseEntity.status(302)
+                            .header("Location", "$websiteUrl/dashboard")
+                            .build()
+                    }
 
                     return ResponseEntity.status(302)
                         .header(

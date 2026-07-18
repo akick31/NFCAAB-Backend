@@ -167,3 +167,9 @@ class InvalidLineupTokenException(message: String) : Exception(message) {
         return "InvalidLineupTokenException: ${super.message}"
     }
 }
+
+class NewSignupNotVerifiedException(message: String) : Exception(message) {
+    override fun toString(): String {
+        return "NewSignupNotVerifiedException: ${super.message}"
+    }
+}

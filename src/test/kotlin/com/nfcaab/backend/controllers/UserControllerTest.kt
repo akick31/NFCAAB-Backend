@@ -1,5 +1,6 @@
 package com.nfcaab.backend.controllers
 
+import com.nfcaab.backend.dto.requests.SelfUserUpdateRequest
 import com.nfcaab.backend.dto.requests.UserValidationRequest
 import com.nfcaab.backend.dto.website.UserDTO
 import com.nfcaab.backend.model.User
@@ -10,6 +11,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.springframework.security.core.Authentication
 import com.nfcaab.backend.service.user.UserService
 
 class UserControllerTest {
@@ -20,6 +22,22 @@ class UserControllerTest {
     fun setUp() {
         userService = mockk()
         userController = UserController(userService)
+    }
+
+    @Test
+    fun `getCurrentUser should resolve the authenticated user's own id from the principal`() {
+        val authentication = mockk<Authentication>()
+        val userDTO =
+            mockk<UserDTO> {
+                every { id } returns 7L
+            }
+        every { authentication.name } returns "7"
+        every { userService.getUserDTOById(7L) } returns userDTO
+
+        val result = userController.getCurrentUser(authentication)
+
+        assertEquals(userDTO, result)
+        verify { userService.getUserDTOById(7L) }
     }
 
     @Test
@@ -108,17 +126,18 @@ class UserControllerTest {
     }
 
     @Test
-    fun `updateUserEmail should return user DTO`() {
-        val id = 1L
-        val newEmail = "newemail@example.com"
+    fun `updateCurrentUser should resolve the authenticated user's own id and apply the update`() {
+        val authentication = mockk<Authentication>()
+        val request = SelfUserUpdateRequest(email = "newemail@example.com")
         val userDTO = mockk<UserDTO>()
 
-        every { userService.updateEmail(id, newEmail) } returns userDTO
+        every { authentication.name } returns "7"
+        every { userService.updateSelf(7L, request) } returns userDTO
 
-        val result = userController.updateUserEmail(id, newEmail)
+        val result = userController.updateCurrentUser(authentication, request)
 
         assertEquals(userDTO, result)
-        verify { userService.updateEmail(id, newEmail) }
+        verify { userService.updateSelf(7L, request) }
     }
 
     @Test

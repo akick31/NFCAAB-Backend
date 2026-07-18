@@ -1,6 +1,7 @@
 package com.nfcaab.backend.service.user
 
 import com.nfcaab.backend.converter.DTOConverter
+import com.nfcaab.backend.dto.requests.SelfUserUpdateRequest
 import com.nfcaab.backend.dto.website.UserDTO
 import com.nfcaab.backend.model.User
 import com.nfcaab.backend.repositories.UserRepository
@@ -114,6 +115,52 @@ class UserServiceTest {
 
         assertEquals(listOf(userDTO), result)
         verify { userRepository.getOpenCoaches() }
+    }
+
+    @Test
+    fun `updateSelf should only change the fields present in the request`() {
+        val id = 1L
+        val user = User().apply {
+            this.id = id
+            username = "oldname"
+            email = "old@example.com"
+            password = "old-hash"
+        }
+        val request = SelfUserUpdateRequest(username = "newname")
+        val userDTO = mockk<UserDTO>()
+
+        every { userRepository.getById(id) } returns user
+        every { userRepository.save(user) } returns user
+        every { dtoConverter.convertToUserDTO(user) } returns userDTO
+
+        val result = userService.updateSelf(id, request)
+
+        assertEquals(userDTO, result)
+        assertEquals("newname", user.username)
+        assertEquals("old@example.com", user.email)
+        verify { userRepository.save(user) }
+    }
+
+    @Test
+    fun `updateSelf should hash the email alongside setting it`() {
+        val id = 1L
+        val user = User().apply {
+            this.id = id
+            username = "coach"
+            email = "old@example.com"
+        }
+        val request = SelfUserUpdateRequest(email = "new@example.com")
+        val userDTO = mockk<UserDTO>()
+
+        every { userRepository.getById(id) } returns user
+        every { encryptionUtils.hash("new@example.com") } returns "hashed-new-email"
+        every { userRepository.save(user) } returns user
+        every { dtoConverter.convertToUserDTO(user) } returns userDTO
+
+        userService.updateSelf(id, request)
+
+        assertEquals("new@example.com", user.email)
+        assertEquals("hashed-new-email", user.hashedEmail)
     }
 }
 

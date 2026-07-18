@@ -1,8 +1,8 @@
 package com.nfcaab.backend.controllers
 
 import com.nfcaab.backend.model.NewSignup
+import com.nfcaab.backend.service.auth.AuthCookieService
 import com.nfcaab.backend.service.auth.AuthService
-import org.springframework.web.bind.annotation.CrossOrigin
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PutMapping
@@ -10,12 +10,14 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
+import javax.servlet.http.HttpServletRequest
+import javax.servlet.http.HttpServletResponse
 
-@CrossOrigin(origins = ["*"])
 @RestController
 @RequestMapping("/auth")
 class AuthController(
     private val authService: AuthService,
+    private val authCookieService: AuthCookieService,
 ) {
     @PostMapping("/register")
     fun registerUser(
@@ -26,12 +28,14 @@ class AuthController(
     fun login(
         @RequestParam("usernameOrEmail") usernameOrEmail: String,
         @RequestParam("password") password: String,
-    ) = authService.login(usernameOrEmail, password)
+        response: HttpServletResponse,
+    ) = authService.login(usernameOrEmail, password, response)
 
     @PostMapping("/logout")
     fun logout(
-        @RequestParam("token") token: String,
-    ) = authService.logout(token)
+        request: HttpServletRequest,
+        response: HttpServletResponse,
+    ) = authService.logout(authCookieService.readAuthCookie(request), response)
 
     @GetMapping("/verify")
     fun verifyEmail(
@@ -43,7 +47,6 @@ class AuthController(
         @RequestParam("id") id: Long,
     ) = authService.resetVerificationToken(id)
 
-    // Add to AuthController.kt
     @PostMapping("/forgot-password")
     fun forgotPassword(
         @RequestParam email: String,

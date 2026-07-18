@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.http.ResponseEntity
 import org.springframework.security.crypto.password.PasswordEncoder
 import java.util.UUID
+import javax.servlet.http.HttpServletResponse
 import com.nfcaab.backend.service.user.UserService
 import com.nfcaab.backend.service.user.NewSignupService
 
@@ -26,6 +27,7 @@ class AuthServiceTest {
     private lateinit var userService: UserService
     private lateinit var newSignupService: NewSignupService
     private lateinit var sessionService: SessionService
+    private lateinit var authCookieService: AuthCookieService
     private lateinit var passwordEncoder: PasswordEncoder
     private lateinit var authService: AuthService
 
@@ -35,8 +37,10 @@ class AuthServiceTest {
         userService = mockk()
         newSignupService = mockk()
         sessionService = mockk()
+        authCookieService = mockk()
         passwordEncoder = mockk()
-        authService = AuthService(emailService, userService, newSignupService, sessionService, passwordEncoder)
+        authService =
+            AuthService(emailService, userService, newSignupService, sessionService, authCookieService, passwordEncoder)
     }
 
     @Test
@@ -59,12 +63,12 @@ class AuthServiceTest {
     }
 
     @Test
-    fun `login should return LoginResponse with token when password is correct`() {
+    fun `login should return LoginResponse and issue an auth cookie when password is correct`() {
         val usernameOrEmail = "testuser"
         val password = "password123"
         val encodedPassword = "encodedPassword"
-        val token = "abc123"
         val userRole = User.Role.USER
+        val response: HttpServletResponse = mockk(relaxed = true)
 
         val testUser = User().apply {
             id = 1
@@ -75,13 +79,13 @@ class AuthServiceTest {
 
         every { userService.getUserByUsernameOrEmail(usernameOrEmail) } returns testUser
         every { passwordEncoder.matches(password, encodedPassword) } returns true
-        every { sessionService.generateToken(testUser.id) } returns token
+        every { authCookieService.issueAuthCookie(response, testUser.id) } just Runs
 
-        val result = authService.login(usernameOrEmail, password)
+        val result = authService.login(usernameOrEmail, password, response)
 
-        assertEquals(LoginResponse(token, testUser.id, userRole), result)
+        assertEquals(LoginResponse(testUser.id, userRole), result)
         verify { passwordEncoder.matches(password, encodedPassword) }
-        verify { sessionService.generateToken(testUser.id) }
+        verify { authCookieService.issueAuthCookie(response, testUser.id) }
     }
 
     @Test
@@ -89,6 +93,7 @@ class AuthServiceTest {
         val usernameOrEmail = "testuser"
         val password = "wrongPassword"
         val encodedPassword = "encodedPassword"
+        val response: HttpServletResponse = mockk()
 
         val user = User().apply {
             id = 1
@@ -100,26 +105,41 @@ class AuthServiceTest {
         every { passwordEncoder.matches(password, encodedPassword) } returns false
 
         org.junit.jupiter.api.assertThrows<UserUnauthorizedException> {
-            authService.login(usernameOrEmail, password)
+            authService.login(usernameOrEmail, password, response)
         }
         verify { userService.getUserByUsernameOrEmail(usernameOrEmail) }
         verify { passwordEncoder.matches(password, encodedPassword) }
     }
 
     @Test
-    fun `logout should blacklist session`() {
+    fun `logout should blacklist session and clear the auth cookie`() {
         val token = "abc123"
+        val response: HttpServletResponse = mockk(relaxed = true)
 
         every { sessionService.blacklistUserSession(token) } just Runs
+        every { authCookieService.clearAuthCookie(response) } just Runs
 
-        val result = authService.logout(token)
+        val result = authService.logout(token, response)
 
         assertEquals("User logged out successfully", result)
         verify { sessionService.blacklistUserSession(token) }
+        verify { authCookieService.clearAuthCookie(response) }
     }
 
     @Test
-    fun `verifyEmail should approve signup`() {
+    fun `logout should clear the auth cookie even when no token was present`() {
+        val response: HttpServletResponse = mockk(relaxed = true)
+
+        every { authCookieService.clearAuthCookie(response) } just Runs
+
+        val result = authService.logout(null, response)
+
+        assertEquals("User logged out successfully", result)
+        verify { authCookieService.clearAuthCookie(response) }
+    }
+
+    @Test
+    fun `verifyEmail should mark the signup's email as verified without approving it`() {
         val token = "verificationToken"
         val newSignup = NewSignup().apply {
             id = 1
@@ -127,13 +147,14 @@ class AuthServiceTest {
         }
 
         every { newSignupService.getByVerificationToken(token) } returns newSignup
-        every { newSignupService.approveNewSignup(newSignup) } returns true
+        every { newSignupService.saveNewSignup(newSignup) } returns newSignup
 
         val result = authService.verifyEmail(token)
 
         assertEquals(true, result)
+        assertEquals(true, newSignup.emailVerified)
         verify { newSignupService.getByVerificationToken(token) }
-        verify { newSignupService.approveNewSignup(newSignup) }
+        verify { newSignupService.saveNewSignup(newSignup) }
     }
 
     @Test

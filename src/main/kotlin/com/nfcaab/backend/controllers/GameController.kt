@@ -10,7 +10,7 @@ import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.data.web.PageableDefault
 import org.springframework.http.ResponseEntity
-import org.springframework.web.bind.annotation.CrossOrigin
+import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -25,7 +25,6 @@ import com.nfcaab.backend.service.game.GameService
 import com.nfcaab.backend.service.game.GameLifecycleService
 import com.nfcaab.backend.service.game.GameWeekService
 
-@CrossOrigin(origins = ["*"])
 @RestController
 @RequestMapping("/game")
 class GameController(
@@ -33,6 +32,7 @@ class GameController(
     private val gameLifecycleService: GameLifecycleService,
     private val gameWeekService: GameWeekService,
 ) {
+    @PreAuthorize("hasAnyRole('ADMIN','SERVICE')")
     @PostMapping("")
     suspend fun startGame(
         @RequestBody startRequest: StartRequest,
@@ -41,6 +41,7 @@ class GameController(
         return ResponseEntity.status(201).body(gameLifecycleService.startSingleGame(startRequest, week))
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','SERVICE')")
     @PostMapping("/week")
     suspend fun startWeek(
         @RequestParam("season") season: Int,
@@ -98,6 +99,7 @@ class GameController(
         return ResponseEntity.ok(gameService.getGameByPlatformId(platformId))
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','SERVICE')")
     @PostMapping("/end")
     fun endGameByChannelId(
         @RequestParam("channelId") channelId: ULong,
@@ -105,6 +107,7 @@ class GameController(
         return ResponseEntity.ok(gameLifecycleService.endSingleGame(channelId))
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','SERVICE')")
     @PostMapping("/{gameId}/end")
     fun endGameByGameId(
         @PathVariable("gameId") gameId: Int,
@@ -112,11 +115,13 @@ class GameController(
         return ResponseEntity.ok(gameLifecycleService.endSingleGameByGameId(gameId))
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','SERVICE')")
     @PostMapping("/end-all")
     fun endAllGames(): ResponseEntity<List<Game>> {
         return ResponseEntity.ok(gameLifecycleService.endAllGames())
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/restart")
     suspend fun restartGame(
         @RequestParam("channelId") channelId: ULong,
@@ -124,6 +129,7 @@ class GameController(
         return ResponseEntity.ok(gameLifecycleService.restartGame(channelId))
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("")
     fun deleteGame(
         @RequestParam("channelId") channelId: ULong,
@@ -131,6 +137,7 @@ class GameController(
         return ResponseEntity.ok(gameLifecycleService.deleteOngoingGame(channelId))
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{gameId}/request-message")
     fun updateRequestMessageId(
         @PathVariable("gameId") gameId: Int,
@@ -139,6 +146,7 @@ class GameController(
         return ResponseEntity.ok(gameService.updateRequestMessageId(gameId, requestMessageId))
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{gameId}/last-message-timestamp")
     fun updateLastMessageTimestamp(
         @PathVariable("gameId") gameId: Int,
@@ -146,6 +154,7 @@ class GameController(
         return ResponseEntity.ok(gameService.updateLastMessageTimestamp(gameId))
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{gameId}/close-game-pinged")
     fun markCloseGamePinged(
         @PathVariable("gameId") gameId: Int,
@@ -154,6 +163,7 @@ class GameController(
         return ResponseEntity.noContent().build()
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{gameId}/upset-alert-pinged")
     fun markUpsetAlertPinged(
         @PathVariable("gameId") gameId: Int,
@@ -162,6 +172,7 @@ class GameController(
         return ResponseEntity.noContent().build()
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("")
     fun updateGame(
         @RequestBody game: Game,
@@ -169,6 +180,7 @@ class GameController(
         return ResponseEntity.ok(gameService.updateGame(game))
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{gameId}/sub")
     fun subCoachIntoGame(
         @PathVariable("gameId") gameId: Int,
@@ -178,6 +190,7 @@ class GameController(
         return ResponseEntity.ok(gameLifecycleService.subCoachIntoGame(gameId, team, discordId))
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{gameId}/pinch-run")
     fun pinchRun(
         @PathVariable("gameId") gameId: Int,
