@@ -191,6 +191,52 @@ class PitcherDecisionServiceTest {
     }
 
     @Test
+    fun `computeDecisions does not award a save for an inherited runner during a blowout`() {
+        val theGame = game(homeScore = 10, awayScore = 0)
+        val atBats =
+            listOf(
+                atBat(1, pitchingTeam = "Away", pitcherUniformNumber = 21, homeScore = 10, awayScore = 0),
+                atBat(2, pitchingTeam = "Home", pitcherUniformNumber = 10, homeScore = 10, awayScore = 0),
+                atBat(3, pitchingTeam = "Home", pitcherUniformNumber = 12, homeScore = 10, awayScore = 0, runnerOnFirst = 5),
+            )
+        val starter = pitcherStats(team = "Home", uniformNumber = 10, inningsPitched = "8.0")
+        val closer = pitcherStats(team = "Home", uniformNumber = 12, inningsPitched = "0.1")
+        val losingPitcher = pitcherStats(team = "Away", uniformNumber = 21, inningsPitched = "8.0")
+
+        every { atBatRepository.getAllAtBatsByGameId(1) } returns atBats
+        every { pitcherGameStatsRepository.findByGameId(1) } returns listOf(starter, closer, losingPitcher)
+        every { pitcherGameStatsRepository.save(any()) } answers { firstArg() }
+
+        pitcherDecisionService.computeDecisions(theGame)
+
+        assertTrue(starter.win)
+        assertFalse(closer.save)
+    }
+
+    @Test
+    fun `computeDecisions awards a save when a reliever enters with the tying run on base`() {
+        val theGame = game(homeScore = 1, awayScore = 0)
+        val atBats =
+            listOf(
+                atBat(1, pitchingTeam = "Away", pitcherUniformNumber = 21, homeScore = 1, awayScore = 0),
+                atBat(2, pitchingTeam = "Home", pitcherUniformNumber = 10, homeScore = 1, awayScore = 0),
+                atBat(3, pitchingTeam = "Home", pitcherUniformNumber = 12, homeScore = 1, awayScore = 0, runnerOnFirst = 7),
+            )
+        val starter = pitcherStats(team = "Home", uniformNumber = 10, inningsPitched = "8.0")
+        val closer = pitcherStats(team = "Home", uniformNumber = 12, inningsPitched = "0.2")
+        val losingPitcher = pitcherStats(team = "Away", uniformNumber = 21, inningsPitched = "8.0")
+
+        every { atBatRepository.getAllAtBatsByGameId(1) } returns atBats
+        every { pitcherGameStatsRepository.findByGameId(1) } returns listOf(starter, closer, losingPitcher)
+        every { pitcherGameStatsRepository.save(any()) } answers { firstArg() }
+
+        pitcherDecisionService.computeDecisions(theGame)
+
+        assertTrue(starter.win)
+        assertTrue(closer.save)
+    }
+
+    @Test
     fun `computeDecisions does nothing when the game is tied`() {
         val theGame = game(homeScore = 4, awayScore = 4)
 

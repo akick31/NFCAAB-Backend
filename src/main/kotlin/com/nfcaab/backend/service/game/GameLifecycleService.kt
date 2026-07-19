@@ -28,7 +28,6 @@ import com.nfcaab.backend.util.NoCoachFoundException
 import com.nfcaab.backend.util.PlayerNotFoundException
 import com.nfcaab.backend.util.TeamNotFoundException
 import com.nfcaab.backend.util.UnableToCreateGameThreadException
-import com.nfcaab.backend.util.UnableToDeleteGameException
 import org.springframework.stereotype.Service
 import java.time.Instant
 import kotlin.math.abs
@@ -92,7 +91,7 @@ class GameLifecycleService(
             val newGame =
                 gameService.saveGame(
                     Game(
-                        gameThreadId = null,
+                        platformId = null,
                         requestMessageId = null,
                         subdivision = subdivision,
                         season = season,
@@ -143,22 +142,16 @@ class GameLifecycleService(
             val discordData =
                 discordService.startGameThread(newGame)
                     ?: run {
-                        deleteOngoingGame(
-                            newGame.gameThreadId?.toULong()
-                                ?: throw UnableToDeleteGameException(),
-                        )
+                        deleteGame(newGame.id)
                         throw UnableToCreateGameThreadException()
                     }
 
             if (discordData[0] == "null") {
-                deleteOngoingGame(
-                    newGame.gameThreadId?.toULong()
-                        ?: throw UnableToDeleteGameException(),
-                )
+                deleteGame(newGame.id)
                 throw UnableToCreateGameThreadException()
             }
 
-            newGame.gameThreadId = discordData[0]
+            newGame.platformId = discordData[0]
             newGame.requestMessageId = discordData[1]
 
             gameService.saveGame(newGame)
@@ -283,23 +276,14 @@ class GameLifecycleService(
         val homeTeamRanking = homeTeam.ranking ?: 100
         val awayTeamRanking = awayTeam.ranking ?: 100
 
-        if ((
-                (game.homeScore <= game.awayScore && homeTeamRanking < awayTeamRanking) ||
-                    (game.awayScore <= game.homeScore && awayTeamRanking < homeTeamRanking)
-            ) &&
-            game.inning >= 8
-        ) {
-            game.upsetAlert = true
-        }
-        if ((
-                (abs(game.homeScore - game.awayScore) <= 8 && homeTeamRanking < awayTeamRanking) ||
-                    (abs(game.awayScore - game.homeScore) <= 8 && awayTeamRanking < homeTeamRanking)
-            ) &&
-            game.inning >= 8
-        ) {
-            game.upsetAlert = true
-        }
-        game.upsetAlert = false
+        val trailingUpset =
+            (game.homeScore <= game.awayScore && homeTeamRanking < awayTeamRanking) ||
+                (game.awayScore <= game.homeScore && awayTeamRanking < homeTeamRanking)
+        val closeUpset =
+            (abs(game.homeScore - game.awayScore) <= 8 && homeTeamRanking < awayTeamRanking) ||
+                (abs(game.awayScore - game.homeScore) <= 8 && awayTeamRanking < homeTeamRanking)
+
+        game.upsetAlert = (trailingUpset || closeUpset) && game.inning >= 8
     }
 
     fun rollbackAtBat(
@@ -373,20 +357,9 @@ class GameLifecycleService(
         return endedGames
     }
 
-    fun endDOGOutGame(
-        game: Game,
-        delayOfGameInstances: Pair<Int, Int>,
-    ): Game {
-        if (delayOfGameInstances.first >= 3) {
-            game.runnerOnThird = game.awayBatterLineupSpot
-            game.runnerOnThirdPitcher = game.pitcherUniformNumber
-        } else if (delayOfGameInstances.second >= 3) {
-            game.runnerOnThird = game.homeBatterLineupSpot
-            game.runnerOnThirdPitcher = game.pitcherUniformNumber
-        }
+    fun endDOGOutGame(game: Game): Game {
         val updatedGame = gameService.saveGame(game)
-        endGame(updatedGame)
-        return game
+        return endGame(updatedGame)
     }
 
     fun endSingleGame(channelId: ULong): Game {
@@ -462,7 +435,10 @@ class GameLifecycleService(
 
     fun deleteOngoingGame(channelId: ULong): Boolean {
         val game = gameService.getGameByPlatformId(channelId)
-        val gameId = game.id
+        return deleteGame(game.id)
+    }
+
+    private fun deleteGame(gameId: Int): Boolean {
         gameRepository.deleteById(gameId)
         gameStatsService.deleteByGameId(gameId)
         atBatRepository.deleteAllAtBatsByGameId(gameId)

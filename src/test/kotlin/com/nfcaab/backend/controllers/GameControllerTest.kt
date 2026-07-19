@@ -177,7 +177,7 @@ class GameControllerTest {
         val platformId = 1234UL
         val game = Game().apply {
             id = 1
-            gameThreadId = platformId.toString()
+            this.platformId = platformId.toString()
         }
 
         every { gameService.getGameByPlatformId(platformId) } returns game

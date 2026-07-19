@@ -166,6 +166,62 @@ class BaseRunningServiceTest {
     }
 
     @Test
+    fun `resolveOutcome for a walk with runners on first and third loads the bases without forcing in a run`() {
+        val runnerOnFirst = Player()
+        val runnerOnThird = Player()
+
+        val outcome =
+            baseRunningService.resolveOutcome(
+                Scenario.WALK,
+                0,
+                InningHalf.TOP,
+                BaseCondition.FIRST_THIRD,
+                runnerOnFirst,
+                null,
+                runnerOnThird,
+                0,
+                0,
+                null,
+                batter,
+            )
+
+        assertEquals(0, outcome.runsScored)
+        assertEquals(0, outcome.awayScore)
+        assertEquals(BaseCondition.BASED_LOADED, outcome.baseConditionAfter)
+        assertEquals(batter, outcome.runnerOnFirstAfter)
+        assertEquals(runnerOnFirst, outcome.runnerOnSecondAfter)
+        assertEquals(runnerOnThird, outcome.runnerOnThirdAfter)
+    }
+
+    @Test
+    fun `resolveOutcome for a walk with runners on second and third loads the bases without moving either runner`() {
+        val runnerOnSecond = Player()
+        val runnerOnThird = Player()
+
+        val outcome =
+            baseRunningService.resolveOutcome(
+                Scenario.WALK,
+                0,
+                InningHalf.TOP,
+                BaseCondition.SECOND_THIRD,
+                null,
+                runnerOnSecond,
+                runnerOnThird,
+                0,
+                0,
+                null,
+                batter,
+            )
+
+        assertEquals(0, outcome.runsScored)
+        assertEquals(0, outcome.awayScore)
+        assertEquals(BaseCondition.BASED_LOADED, outcome.baseConditionAfter)
+        assertEquals(batter, outcome.runnerOnFirstAfter)
+        assertEquals(runnerOnSecond, outcome.runnerOnSecondAfter)
+        assertEquals(runnerOnThird, outcome.runnerOnThirdAfter)
+    }
+
+    @Test
     fun `resolveOutcome for a single to left holds a runner on second at third regardless of archetype and places the batter on first`() {
         val speedyRunner = Player().apply { batterArchetype = Player.BatterArchetype.SPEEDY }
 
@@ -570,6 +626,35 @@ class BaseRunningServiceTest {
     }
 
     @Test
+    fun `resolveOutcome for a right-side groundout with runners on second and third scores third and advances second`() {
+        val runnerOnSecond = Player().apply { batterArchetype = Player.BatterArchetype.NEUTRAL }
+        val runnerOnThird = Player().apply { batterArchetype = Player.BatterArchetype.NEUTRAL }
+
+        val outcome =
+            baseRunningService.resolveOutcome(
+                Scenario.RIGHT_GROUNDOUT,
+                0,
+                InningHalf.TOP,
+                BaseCondition.SECOND_THIRD,
+                null,
+                runnerOnSecond,
+                runnerOnThird,
+                0,
+                0,
+                null,
+                batter,
+            )
+
+        assertEquals(ActualResult.GROUNDOUT, outcome.actualResult)
+        assertEquals(1, outcome.outs)
+        assertEquals(1, outcome.runsScored)
+        assertEquals(1, outcome.awayScore)
+        assertEquals(BaseCondition.THIRD, outcome.baseConditionAfter)
+        assertEquals(runnerOnSecond, outcome.runnerOnThirdAfter)
+        assertEquals(listOf(runnerOnThird), outcome.scoringRunners)
+    }
+
+    @Test
     fun `resolveOutcome for a bunt to the right side with a runner on first always advances them and retires the batter`() {
         val runnerOnFirst = Player().apply { batterArchetype = Player.BatterArchetype.NEUTRAL }
 
@@ -944,6 +1029,33 @@ class BaseRunningServiceTest {
 
         assertEquals(1, outcome.runsScored)
         assertEquals(BaseCondition.THIRD, outcome.baseConditionAfter)
+        assertEquals(runnerOnSecond, outcome.runnerOnThirdAfter)
+        assertEquals(listOf(runnerOnThird), outcome.scoringRunners)
+    }
+
+    @Test
+    fun `resolveStealOutcome performs a double steal of home with the bases loaded`() {
+        val runnerOnFirst = Player().apply { uniformNumber = 12 }
+        val runnerOnSecond = Player().apply { uniformNumber = 13 }
+        val runnerOnThird = Player().apply { uniformNumber = 15 }
+
+        val outcome =
+            baseRunningService.resolveStealOutcome(
+                Scenario.STEAL_SUCCESS,
+                0,
+                InningHalf.TOP,
+                runnerOnFirst,
+                runnerOnSecond,
+                runnerOnThird,
+                2,
+                2,
+            )
+
+        assertEquals(1, outcome.runsScored)
+        assertEquals(3, outcome.awayScore)
+        assertEquals(BaseCondition.SECOND_THIRD, outcome.baseConditionAfter)
+        assertEquals(null, outcome.runnerOnFirstAfter)
+        assertEquals(runnerOnFirst, outcome.runnerOnSecondAfter)
         assertEquals(runnerOnSecond, outcome.runnerOnThirdAfter)
         assertEquals(listOf(runnerOnThird), outcome.scoringRunners)
     }

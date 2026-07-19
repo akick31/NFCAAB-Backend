@@ -103,7 +103,9 @@ class PitcherDecisionService(
         val entryMargin = if (winningTeam == game.homeTeam) entryHomeScore - entryAwayScore else entryAwayScore - entryHomeScore
 
         val entryPlay = atBats[entryIndex]
-        val tyingRunOnBase = entryPlay.runnerOnFirst != null || entryPlay.runnerOnSecond != null || entryPlay.runnerOnThird != null
+        val runnersOnBaseAtEntry =
+            listOfNotNull(entryPlay.runnerOnFirst, entryPlay.runnerOnSecond, entryPlay.runnerOnThird).size
+        val tyingRunOnBase = entryMargin in 1..runnersOnBaseAtEntry
         val innings = inningsPitchedFor(finishingPitcherUniformNumber)
 
         val eligible =

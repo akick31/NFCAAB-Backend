@@ -109,6 +109,12 @@ class BaseRunningService(
         }
 
         when {
+            runnerOnFirst != null && runnerOnSecond != null && runnerOnThird != null -> {
+                runnerOnFirstAfter = null
+                runnerOnSecondAfter = runnerOnFirst
+                runnerOnThirdAfter = runnerOnSecond
+                if (success) scoreRun(runnerOnThird) else updatedOuts = outs + 1
+            }
             runnerOnFirst != null && runnerOnSecond != null && runnerOnThird == null -> {
                 runnerOnFirstAfter = null
                 runnerOnSecondAfter = runnerOnFirst
@@ -652,30 +658,15 @@ class BaseRunningService(
                 baseConditionAfter = BaseCondition.FIRST_THIRD
             }
             BaseCondition.FIRST_THIRD -> {
-                var updatedHomeScore = homeScore
-                var updatedAwayScore = awayScore
-                if (inningHalf == TOP) {
-                    updatedAwayScore += 1
-                } else {
-                    updatedHomeScore += 1
-                }
-                return AtBatOutcome(
-                    actualResult = actualResult,
-                    outs = outs,
-                    runsScored = 1,
-                    homeScore = updatedHomeScore,
-                    awayScore = updatedAwayScore,
-                    runnerOnFirstAfter = batter,
-                    runnerOnSecondAfter = runnerOnFirst,
-                    runnerOnThirdAfter = null,
-                    baseConditionAfter = BaseCondition.FIRST_SECOND,
-                    scoringRunners = listOfNotNull(runnerOnThird),
-                )
+                runnerOnFirstAfter = batter
+                runnerOnSecondAfter = runnerOnFirst
+                runnerOnThirdAfter = runnerOnThird
+                baseConditionAfter = BaseCondition.BASED_LOADED
             }
             BaseCondition.SECOND_THIRD -> {
                 runnerOnFirstAfter = batter
                 runnerOnSecondAfter = runnerOnSecond
-                runnerOnThirdAfter = null
+                runnerOnThirdAfter = runnerOnThird
                 baseConditionAfter = BaseCondition.BASED_LOADED
             }
             BaseCondition.BASED_LOADED -> {
@@ -807,6 +798,19 @@ class BaseRunningService(
                     runnerOnSecondAfter = null
                     runnerOnThirdAfter = null
                     baseConditionAfter = BaseCondition.EMPTY
+                    runsScored = 1
+                    scoringRunners = listOfNotNull(runnerOnThird)
+                    if (inningHalf == TOP) {
+                        updatedAwayScore += 1
+                    } else {
+                        updatedHomeScore += 1
+                    }
+                }
+                BaseCondition.SECOND_THIRD -> {
+                    runnerOnFirstAfter = null
+                    runnerOnSecondAfter = null
+                    runnerOnThirdAfter = runnerOnSecond
+                    baseConditionAfter = BaseCondition.THIRD
                     runsScored = 1
                     scoringRunners = listOfNotNull(runnerOnThird)
                     if (inningHalf == TOP) {

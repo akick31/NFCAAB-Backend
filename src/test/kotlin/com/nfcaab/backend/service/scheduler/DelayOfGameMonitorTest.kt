@@ -113,7 +113,7 @@ class DelayOfGameMonitorTest {
         every { gameService.saveGame(any()) } returns expiredGame
         every { scorebugService.generateScorebug(any()) } returns mockk()
         every { atBatRepository.save(any()) } returns savedAtBat
-        every { gameLifecycleService.endDOGOutGame(any(), any()) } returns expiredGame
+        every { gameLifecycleService.endDOGOutGame(any()) } returns expiredGame
         every { discordService.notifyDelayOfGame(any(), any()) } returns Unit
 
         delayOfGameMonitor.checkForDelayOfGame()

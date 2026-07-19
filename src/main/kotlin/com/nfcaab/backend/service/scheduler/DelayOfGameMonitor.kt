@@ -48,7 +48,7 @@ class DelayOfGameMonitor(
             val delayOfGameInstances = getDelayOfGameInstances(updatedGame, delayingSide)
             val isDelayOfGameOut = delayOfGameInstances.first >= 3 || delayOfGameInstances.second >= 3
             if (isDelayOfGameOut) {
-                gameLifecycleService.endDOGOutGame(updatedGame, delayOfGameInstances)
+                gameLifecycleService.endDOGOutGame(updatedGame)
             }
             discordService.notifyDelayOfGame(updatedGame, isDelayOfGameOut)
             Logger.info("A delay of game for game ${game.id} has been processed")

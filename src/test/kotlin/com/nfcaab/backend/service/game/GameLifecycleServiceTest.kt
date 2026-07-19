@@ -27,6 +27,7 @@ import com.nfcaab.backend.service.stats.PitcherDecisionService
 import com.nfcaab.backend.service.team.TeamService
 import com.nfcaab.backend.service.user.UserService
 import com.nfcaab.backend.util.TeamNotFoundException
+import com.nfcaab.backend.util.UnableToCreateGameThreadException
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -165,6 +166,52 @@ class GameLifecycleServiceTest {
         }
 
     @Test
+    fun `startSingleGame should delete the game and throw when the discord thread fails to create`() {
+        val homeTeam = Team().apply { name = "Home Team"; coachUsername = "homeCoach"; coachDiscordId = "home123"; currentWins = 1; currentLosses = 0; ranking = null }
+        val awayTeam = Team().apply { name = "Away Team"; coachUsername = "awayCoach"; coachDiscordId = "away123"; currentWins = 0; currentLosses = 1; ranking = null }
+        val startRequest = StartRequest(Subdivision.NFCAAB, "Home Team", "Away Team", GameType.SCRIMMAGE, 1)
+        val savedGame = scrimmageGame()
+
+        every { teamService.getTeamByName("Home Team") } returns homeTeam
+        every { teamService.getTeamByName("Away Team") } returns awayTeam
+        every { gameService.calculateDelayOfGameTimer() } returns "07/13/2026 12:00:00"
+        every { gameService.saveGame(any()) } returns savedGame
+        coEvery { discordService.startGameThread(any()) } returns null
+        every { gameRepository.deleteById(savedGame.id) } returns Unit
+        every { gameStatsService.deleteByGameId(savedGame.id) } returns Unit
+        every { atBatRepository.deleteAllAtBatsByGameId(savedGame.id) } returns Unit
+
+        assertThrows(UnableToCreateGameThreadException::class.java) {
+            runBlocking { gameLifecycleService.startSingleGame(startRequest, null) }
+        }
+
+        verify { gameRepository.deleteById(savedGame.id) }
+    }
+
+    @Test
+    fun `startSingleGame should delete the game and throw when discord returns a null thread id`() {
+        val homeTeam = Team().apply { name = "Home Team"; coachUsername = "homeCoach"; coachDiscordId = "home123"; currentWins = 1; currentLosses = 0; ranking = null }
+        val awayTeam = Team().apply { name = "Away Team"; coachUsername = "awayCoach"; coachDiscordId = "away123"; currentWins = 0; currentLosses = 1; ranking = null }
+        val startRequest = StartRequest(Subdivision.NFCAAB, "Home Team", "Away Team", GameType.SCRIMMAGE, 1)
+        val savedGame = scrimmageGame()
+
+        every { teamService.getTeamByName("Home Team") } returns homeTeam
+        every { teamService.getTeamByName("Away Team") } returns awayTeam
+        every { gameService.calculateDelayOfGameTimer() } returns "07/13/2026 12:00:00"
+        every { gameService.saveGame(any()) } returns savedGame
+        coEvery { discordService.startGameThread(any()) } returns listOf("null", "message1")
+        every { gameRepository.deleteById(savedGame.id) } returns Unit
+        every { gameStatsService.deleteByGameId(savedGame.id) } returns Unit
+        every { atBatRepository.deleteAllAtBatsByGameId(savedGame.id) } returns Unit
+
+        assertThrows(UnableToCreateGameThreadException::class.java) {
+            runBlocking { gameLifecycleService.startSingleGame(startRequest, null) }
+        }
+
+        verify { gameRepository.deleteById(savedGame.id) }
+    }
+
+    @Test
     fun `updateGameValues should advance to a new inning when three outs are recorded`() {
         val game = scrimmageGame().apply { inningHalf = TOP; inning = 5; outs = 2; homeBatterLineupSpot = 1; awayBatterLineupSpot = 9 }
         val batter = Player().apply { firstName = "First"; lastName = "Last"; uniformNumber = 12 }
@@ -193,6 +240,35 @@ class GameLifecycleServiceTest {
         assertEquals(5, result.inning)
         assertEquals(0, result.outs)
         assertEquals(TeamSide.AWAY, result.waitingOn)
+    }
+
+    @Test
+    fun `updateGameValues should set the upset alert when an unranked team leads a ranked opponent late`() {
+        val game = scrimmageGame().apply { inningHalf = TOP; inning = 8; outs = 1; homeBatterLineupSpot = 1; awayBatterLineupSpot = 9 }
+        val batter = Player().apply { firstName = "First"; lastName = "Last"; uniformNumber = 12 }
+        val pitcher = Player().apply { firstName = "Pitch"; lastName = "Er"; uniformNumber = 21 }
+        val outcome =
+            AtBatOutcome(
+                actualResult = ActualResult.SINGLE,
+                outs = 1,
+                runsScored = 0,
+                homeScore = 2,
+                awayScore = 5,
+                runnerOnFirstAfter = null,
+                runnerOnSecondAfter = null,
+                runnerOnThirdAfter = null,
+                baseConditionAfter = Game.BaseCondition.EMPTY,
+            )
+
+        every { lineupService.getBatterByLineupSpot(any(), any(), any()) } returns batter
+        every { lineupService.getPitcherByTeam(any(), any()) } returns pitcher
+        every { teamService.getTeamByName("Home Team") } returns Team().apply { name = "Home Team"; ranking = 1 }
+        every { teamService.getTeamByName("Away Team") } returns Team().apply { name = "Away Team"; ranking = null }
+        every { gameService.calculateDelayOfGameTimer() } returns "07/13/2026 12:00:00"
+
+        val result = gameLifecycleService.updateGameValues(game, outcome)
+
+        assertEquals(true, result.upsetAlert)
     }
 
     @Test
@@ -369,8 +445,8 @@ class GameLifecycleServiceTest {
     }
 
     @Test
-    fun `endDOGOutGame should place a runner on third for the offended side and end the game`() {
-        val game = scrimmageGame().apply { awayBatterLineupSpot = 4 }
+    fun `endDOGOutGame should end the game without altering baserunners`() {
+        val game = scrimmageGame().apply { awayBatterLineupSpot = 4; runnerOnThird = null }
 
         every { gameService.saveGame(game) } returns game
         every { teamService.updateTeamWinsAndLosses(any()) } returns Unit
@@ -386,9 +462,10 @@ class GameLifecycleServiceTest {
         every { gameStatsService.saveGameStats(any()) } returns mockk()
         every { pitcherDecisionService.computeDecisions(any()) } returns Unit
 
-        val result = gameLifecycleService.endDOGOutGame(game, Pair(3, 0))
+        val result = gameLifecycleService.endDOGOutGame(game)
 
-        assertEquals(4, result.runnerOnThird)
+        assertEquals(null, result.runnerOnThird)
+        assertEquals(GameStatus.FINAL, result.gameStatus)
         verify { gameService.saveGame(game) }
     }
 

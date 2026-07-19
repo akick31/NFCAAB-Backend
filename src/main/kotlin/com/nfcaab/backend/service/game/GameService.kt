@@ -30,7 +30,7 @@ class GameService(
             ?: throw GameNotFoundException("Game not found for Request Message ID: $requestMessageId")
 
     fun getGameByPlatformId(platformId: ULong) =
-        gameRepository.getGameByPlatformId(platformId)
+        gameRepository.getGameByPlatformId(platformId.toString())
             ?: throw GameNotFoundException("Game not found for Platform ID: $platformId")
 
     fun getGameById(id: Int) = gameRepository.getGameById(id) ?: throw GameNotFoundException("No game found with ID: $id")

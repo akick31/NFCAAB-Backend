@@ -21,8 +21,8 @@ class Game {
     @Column(name = "game_id", nullable = false)
     var id: Int = 0
 
-    @Column(name = "game_thread_id")
-    var gameThreadId: String? = null
+    @Column(name = "platform_id")
+    var platformId: String? = null
 
     @Column(name = "request_message_id")
     var requestMessageId: String? = null
@@ -170,7 +170,7 @@ class Game {
 
     // Constructor with parameters
     constructor(
-        gameThreadId: String?,
+        platformId: String?,
         requestMessageId: String?,
         subdivision: Subdivision?,
         season: Int?,
@@ -216,7 +216,7 @@ class Game {
         upsetAlertPinged: Boolean? = false,
         gameStatus: GameStatus,
     ) {
-        this.gameThreadId = gameThreadId
+        this.platformId = platformId
         this.requestMessageId = requestMessageId
         this.subdivision = subdivision
         this.season = season

@@ -16,8 +16,8 @@ interface GameRepository : CrudRepository<Game, Int>, JpaSpecificationExecutor<G
     @Query(value = "SELECT * FROM game WHERE JSON_CONTAINS(request_message_id, ?, '\$')", nativeQuery = true)
     fun getGameByRequestMessageId(requestMessageId: String): Game?
 
-    @Query(value = "SELECT * FROM game WHERE home_platform_id = :platformId OR away_platform_id = :platformId", nativeQuery = true)
-    fun getGameByPlatformId(platformId: ULong): Game?
+    @Query(value = "SELECT * FROM game WHERE platform_id = :platformId", nativeQuery = true)
+    fun getGameByPlatformId(platformId: String): Game?
 
     @Query(value = "SELECT * FROM game WHERE game_type != 'SCRIMMAGE'", nativeQuery = true)
     fun getAllGames(): List<Game>
