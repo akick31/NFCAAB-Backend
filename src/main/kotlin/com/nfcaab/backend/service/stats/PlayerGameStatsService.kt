@@ -150,9 +150,25 @@ class PlayerGameStatsService(
         }
 
     private fun calculateInningsPitched(atBats: List<AtBat>): Double {
+        val singleOutResults =
+            setOf(
+                ActualResult.STRIKEOUT,
+                ActualResult.FLYOUT,
+                ActualResult.GROUNDOUT,
+                ActualResult.SACRIFICE_FLY,
+                ActualResult.SACRIFICE_BUNT,
+                ActualResult.FIELDERS_CHOICE,
+                ActualResult.CAUGHT_STEALING,
+            )
         val outs =
-            atBats.count { pa ->
-                pa.actualResult?.let { it in listOf(ActualResult.STRIKEOUT, ActualResult.FLYOUT, ActualResult.GROUNDOUT) } ?: false
+            atBats.sumOf { pa ->
+                val outsRecorded: Int =
+                    when (pa.actualResult) {
+                        ActualResult.DOUBLE_PLAY -> 2
+                        in singleOutResults -> 1
+                        else -> 0
+                    }
+                outsRecorded
             }
         return outs.toDouble() / 3.0
     }

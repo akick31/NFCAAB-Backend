@@ -105,5 +105,72 @@ class GameStatsServiceTest {
         assertEquals(2, result.size)
         verify { gameStatsRepository.save(any()) }
     }
+
+    @Test
+    fun `updateGameStats counts a double play as two outs and a fielders choice as one out toward innings pitched`() {
+        val game = Game().apply {
+            id = 1
+            homeTeam = "Team A"
+            awayTeam = "Team B"
+        }
+
+        val atBats = listOf(
+            AtBat().apply {
+                homeTeam = "Team A"
+                awayTeam = "Team B"
+                battingTeam = "Team B"
+                pitchingTeam = "Team A"
+                actualResult = Game.ActualResult.DOUBLE_PLAY
+            },
+            AtBat().apply {
+                homeTeam = "Team A"
+                awayTeam = "Team B"
+                battingTeam = "Team B"
+                pitchingTeam = "Team A"
+                actualResult = Game.ActualResult.FIELDERS_CHOICE
+            },
+        )
+
+        val teamAStats = GameStats().apply { gameId = 1; team = "Team A" }
+        val teamBStats = GameStats().apply { gameId = 1; team = "Team B" }
+
+        every { gameStatsRepository.getGameStatsByIdAndTeam(1, "Team A") } returns teamAStats
+        every { gameStatsRepository.getGameStatsByIdAndTeam(1, "Team B") } returns teamBStats
+        every { gameStatsRepository.save(any()) } returns mockk()
+
+        gameStatsService.updateGameStats(game, atBats)
+
+        assertEquals(1.0, teamAStats.inningsPitched)
+    }
+
+    @Test
+    fun `updateGameStats reports a largest lead and deficit of zero rather than negative for a one-sided game`() {
+        val game = Game().apply {
+            id = 1
+            homeTeam = "Team A"
+            awayTeam = "Team B"
+            homeScore = 1
+            awayScore = 3
+        }
+
+        val atBats = listOf(
+            AtBat().apply { homeTeam = "Team A"; awayTeam = "Team B"; homeScore = 0; awayScore = 1 },
+            AtBat().apply { homeTeam = "Team A"; awayTeam = "Team B"; homeScore = 1; awayScore = 3 },
+        )
+
+        val teamAStats = GameStats().apply { gameId = 1; team = "Team A" }
+        val teamBStats = GameStats().apply { gameId = 1; team = "Team B" }
+
+        every { gameStatsRepository.getGameStatsByIdAndTeam(1, "Team A") } returns teamAStats
+        every { gameStatsRepository.getGameStatsByIdAndTeam(1, "Team B") } returns teamBStats
+        every { gameStatsRepository.save(any()) } returns mockk()
+
+        gameStatsService.updateGameStats(game, atBats)
+
+        assertEquals(0, teamAStats.largestLead)
+        assertEquals(2, teamAStats.largestDeficit)
+        assertEquals(2, teamBStats.largestLead)
+        assertEquals(0, teamBStats.largestDeficit)
+    }
 }
 

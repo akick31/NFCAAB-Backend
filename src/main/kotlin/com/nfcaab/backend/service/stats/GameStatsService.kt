@@ -251,8 +251,26 @@ class GameStatsService(
     }
 
     private fun calculateInningsPitched(atBats: List<AtBat>): Double {
-        // Count outs and divide by 3
-        val outs = atBats.count { pa -> pa.actualResult?.let { it in listOf(ActualResult.STRIKEOUT, ActualResult.FLYOUT, ActualResult.GROUNDOUT) } ?: false }
+        val singleOutResults =
+            setOf(
+                ActualResult.STRIKEOUT,
+                ActualResult.FLYOUT,
+                ActualResult.GROUNDOUT,
+                ActualResult.SACRIFICE_FLY,
+                ActualResult.SACRIFICE_BUNT,
+                ActualResult.FIELDERS_CHOICE,
+                ActualResult.CAUGHT_STEALING,
+            )
+        val outs =
+            atBats.sumOf { pa ->
+                val outsRecorded: Int =
+                    when (pa.actualResult) {
+                        ActualResult.DOUBLE_PLAY -> 2
+                        in singleOutResults -> 1
+                        else -> 0
+                    }
+                outsRecorded
+            }
         return outs.toDouble() / 3.0
     }
 
@@ -291,23 +309,25 @@ class GameStatsService(
     }
 
     private fun calculateLargestLead(allAtBats: List<AtBat>, team: String): Int {
-        return allAtBats.maxOfOrNull { pa ->
+        val largestMargin = allAtBats.maxOfOrNull { pa ->
             if (team == pa.homeTeam) {
                 pa.homeScore - pa.awayScore
             } else {
                 pa.awayScore - pa.homeScore
             }
         } ?: 0
+        return largestMargin.coerceAtLeast(0)
     }
 
     private fun calculateLargestDeficit(allAtBats: List<AtBat>, team: String): Int {
-        return allAtBats.maxOfOrNull { pa ->
+        val largestMargin = allAtBats.maxOfOrNull { pa ->
             if (team == pa.homeTeam) {
                 pa.awayScore - pa.homeScore
             } else {
                 pa.homeScore - pa.awayScore
             }
         } ?: 0
+        return largestMargin.coerceAtLeast(0)
     }
 
     private fun calculateAverageResponseSpeed(
